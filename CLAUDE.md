@@ -70,3 +70,39 @@ See `PRD.md` for full spec. Key REQs: REQ-001 (basic hoisting), REQ-002
 (jest-globals first), REQ-003 (import tracking), REQ-004 (shadowing), REQ-005
 (factory validation), REQ-006 (mock-prefix vars), REQ-007 (block scope), REQ-008
 (chained calls).
+
+## Core Philosophy
+
+**TEST-DRIVEN DEVELOPMENT IS NON-NEGOTIABLE.** Every single line of production
+code must be written in response to a failing test. No exceptions. This is not a
+suggestion or a preference - it is the fundamental practice that enables all
+other principles in this document.
+
+I follow Test-Driven Development (TDD) with a strong emphasis on behavior-driven
+testing and functional programming principles. All work should be done in small,
+incremental changes that maintain a working state throughout development.
+
+## Quick Reference
+
+- Write tests first (TDD)
+- Test behavior, not implementation
+- No `any` types or type assertions
+- Immutable data only
+- Small, pure functions
+- TypeScript strict mode always
+- Use real schemas/types in tests, never redefine them
+
+## Development Workflow
+
+**Core principle**: RED-GREEN-REFACTOR in small, known-good increments. TDD is
+the fundamental practice.
+
+**Quick reference:**
+
+- RED: Write failing test first (NO production code without failing test)
+- RED: Test should fail for expected reason (not syntax error, type error, etc.)
+    - Implement test doubles/mocks as needed to isolate behavior
+- GREEN: Write MINIMUM code to pass test
+- REFACTOR: Assess improvement opportunities (only refactor if adds value)
+- Each increment leaves codebase in working state
+- Capture learnings as they occur, merge at end
