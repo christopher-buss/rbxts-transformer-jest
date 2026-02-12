@@ -1,0 +1,171 @@
+diff --git a/src/index.d.ts b/src/index.d.ts
+index a6ae4adcb4c713e80565ed331efbe84746b995d3..83dcfd87dbec49abf0613e452cdeb53ecceaa325 100644
+--- a/src/index.d.ts
++++ b/src/index.d.ts
+@@ -157,18 +157,36 @@ export declare namespace jest {
+ 	 * of the specified module from require() (e.g. that it should always return the real module).
+ 	 */
+ 	function dontMock(moduleScript: ModuleScript): typeof jest;
+-	/**
+-	 * Creates a mock function. Optionally takes a mock implementation.
+-	 */
+-	function fn(): Mock;
+-	/**
+-	 * Creates a mock function. Optionally takes a mock implementation.
+-	 */
+-	function fn<T, Y extends any[]>(implementation?: (...args: Y) => T): Mock<T, Y>;
++    /**
++     * Creates a mock function. Optionally takes a mock implementation.
++     *
++     * Returns a LuaTuple of [mock, mockFn]. The first value is the mock
++     * object (callable table). The second is a forwarding function for
++     * cases where a real function is required.
++     *
++     * @example
++     * const [mock, mockFn] = jest.fn()
++     * mockFn()
++     * expect(mock).toHaveBeenCalled()
++     */
++    function fn(): LuaTuple<[Mock, (...args: any[]) => any]>;
++    /**
++     * Creates a mock function. Optionally takes a mock implementation.
++     *
++     * Returns a LuaTuple of [mock, mockFn]. The first value is the mock
++     * object (callable table). The second is a forwarding function for
++     * cases where a real function is required.
++     *
++     * @example
++     * const [mock, mockFn] = jest.fn((x: number) => x + 1)
++     * mockFn(1)
++     * expect(mock).toHaveReturnedWith(2)
++     */
++    function fn<T, Y extends any[]>(implementation?: (...args: Y) => T): LuaTuple<[Mock<T, Y>, (...args: Y) => T]>;
+ 	/**
+ 	 * Returns whether the given function is a mock function.
+ 	 */
+-	function isMockFunction(fn: any): fn is Mock;
++	function isMockFunction(this: typeof jest, fn: any): fn is Mock;
+ 	/**
+ 	 * Mocks a module with an mocked version when it is being required. The
+ 	 * second argument must be used to specify the value of the mocked module.
+@@ -426,6 +444,12 @@ export declare namespace jest {
+ 		 */
+ 		only: It;
+ 		/**
++         * Mark this test as expecting to fail.
++         *
++         * Only available in the default `jest-circus` runner.
++         */
++        failing: It;
++		/**
+ 		 * Skips running this test in the current file.
+ 		 */
+ 		skip: It;
+@@ -542,7 +566,7 @@ export declare namespace jest {
+ 		 * Optionally, you can provide a type for the elements via a generic.
+ 		 */
+ 		// tslint:disable-next-line: no-unnecessary-generics
+-		arrayContaining<E = any>(this: void, arr: E[]): any;
++		arrayContaining<E = any>(this: void, arr: E[]): AsymmetricMatcher;
+ 		/**
+ 		 * `expect.not.objectContaining(object)` matches any received object
+ 		 * that does not recursively match the expected properties. That is, the
+@@ -554,19 +578,24 @@ export declare namespace jest {
+ 		 * This ensures that the object contains the desired structure.
+ 		 */
+ 		// tslint:disable-next-line: no-unnecessary-generics
+-		objectContaining<E = {}>(this: void, obj: E): any;
++		objectContaining<E = {}>(this: void, obj: E): AsymmetricMatcher;
+ 		/**
+ 		 * `expect.not.stringMatching(string | regexp)` matches the received
+ 		 * string that does not match the expected regexp. It is the inverse of
+ 		 * `expect.stringMatching`.
+ 		 */
+-		stringMatching(this: void, str: string): any;
++		stringMatching(this: void, str: string): AsymmetricMatcher;
+ 		/**
+ 		 * `expect.not.stringContaining(string)` matches the received string
+ 		 * that does not contain the exact expected string. It is the inverse of
+ 		 * `expect.stringContaining`.
+ 		 */
+-		stringContaining(this: void, str: string): any;
++		stringContaining(this: void, str: string): AsymmetricMatcher;
++		/**
++		 * `expect.never.callable()` matches anything that is not callable.
++		 * It is the inverse of `expect.callable`.
++		 */
++		callable(this: void): AsymmetricMatcher;
+ 	}
+ 	interface MatcherState {
+ 		assertionCalls: number;
+@@ -603,7 +632,7 @@ export declare namespace jest {
+ 		 * });
+ 		 *
+ 		 */
+-		anything(this: void): any;
++		anything(this: void): AsymmetricMatcher;
+ 		/**
+ 		 * Matches anything that was created with the given constructor.
+ 		 * You can use it inside `toEqual` or `toBeCalledWith` instead of a literal value.
+@@ -620,7 +649,7 @@ export declare namespace jest {
+ 		 *   expect(mock).toBeCalledWith(expect.any(Number));
+ 		 * });
+ 		 */
+-		any(this: void, classType: any): any;
++		any(this: void, classType: any): AsymmetricMatcher;
+ 		/**
+ 		 * Matches only `nil`. You can use it inside `toEqual`, `toMatchObject`,
+ 		 * `toBeCalledWith`, or similar matchers instead of a literal value. For example,
+@@ -637,7 +666,13 @@ export declare namespace jest {
+ 		 *   expect({ foo = "bar" }).toMatchObject({ expected });
+ 		 * });
+ 		 */
+-		nothing(this: void): any;
++		nothing(this: void): AsymmetricMatcher;
++		/**
++		 * Matches anything that behaves like a function, including callable
++		 * tables and callable userdata. Prefer over `expect.any("function")`
++		 * unless you care about the underlying data type.
++		 */
++		callable(this: void): AsymmetricMatcher;
+ 		/**
+ 		 * Matches any array made up entirely of elements in the provided array.
+ 		 * You can use it inside `toEqual` or `toBeCalledWith` instead of a literal value.
+@@ -645,7 +680,7 @@ export declare namespace jest {
+ 		 * Optionally, you can provide a type for the elements via a generic.
+ 		 */
+ 		// tslint:disable-next-line: no-unnecessary-generics
+-		arrayContaining<E = any>(this: void, arr: E[]): any;
++		arrayContaining<E = any>(this: void, arr: E[]): AsymmetricMatcher;
+ 		/**
+ 		 * Verifies that a certain number of assertions are called during a test.
+ 		 * This is often useful when testing asynchronous code, in order to
+@@ -674,15 +709,15 @@ export declare namespace jest {
+ 		 * This ensures that the object contains the desired structure.
+ 		 */
+ 		// tslint:disable-next-line: no-unnecessary-generics
+-		objectContaining<E = {}>(this: void, obj: E): any;
++		objectContaining<E = {}>(this: void, obj: E): AsymmetricMatcher;
+ 		/**
+ 		 * Matches any string that contains the provided Lua string pattern
+ 		 */
+-		stringMatching(this: void, str: string): any;
++		stringMatching(this: void, str: string): AsymmetricMatcher;
+ 		/**
+ 		 * Matches any received string that contains the exact expected string
+ 		 */
+-		stringContaining(this: void, str: string): any;
++		stringContaining(this: void, str: string): AsymmetricMatcher;
+ 
+ 		never: InverseAsymmetricMatchers;
+ 
+@@ -1079,6 +1114,9 @@ export declare namespace jest {
+ 
+ 	interface AsymmetricMatcher {
+ 		asymmetricMatch(other: unknown): boolean;
++		getExpectedType(): string;
++		toAsymmetricMatcher(): string;
++		toString(): string;
+ 	}
+ 	type NonAsyncMatchers<TMatchers extends ExpectExtendMap> = {
+ 		[K in keyof TMatchers]: ReturnType<TMatchers[K]> extends Promise<CustomMatcherResult> ? never : K;

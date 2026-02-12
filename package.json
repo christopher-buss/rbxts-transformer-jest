@@ -1,0 +1,68 @@
+{
+	"name": "rbxts-jest-transformer",
+	"version": "0.0.1",
+	"description": "A Jest transformer for Roblox TypeScript (rbxts) projects.",
+	"keywords": ["jest", "roblox", "rbxts", "testing", "transformer"],
+	"license": "MIT",
+	"author": "Christopher Buss <christopher.buss@pm.me> (https://github.com/christopher-buss)",
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
+	},
+	"types": "./dist/index.d.mts",
+	"files": ["dist", "!dist/**/*.tsbuildinfo"],
+	"scripts": {
+		"build": "tsdown",
+		"lint": "eslint --cache",
+		"lint:ci": "eslint --cache --cache-strategy content",
+		"prepack": "nr build",
+		"prepare": "simple-git-hooks",
+		"prepublishOnly": "nr build",
+		"release": "bumpp",
+		"typecheck": "tsgo --noEmit",
+		"watch": "tsdown --watch"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "pnpm lint-staged"
+	},
+	"lint-staged": {
+		"*": "eslint --fix --cache --no-warn-ignored",
+		"*.ts": ["sh -c 'pnpm tsgo --noEmit'"]
+	},
+	"devDependencies": {
+		"@isentinel/eslint-config": "catalog:lint",
+		"@isentinel/tsconfig": "catalog:tsc",
+		"@rbxts/jest": "catalog:test",
+		"@rbxts/jest-globals": "catalog:test",
+		"@rbxts/types": "catalog:types",
+		"@types/node": "catalog:types",
+		"@typescript/native-preview": "catalog:tsc",
+		"@vitest/coverage-v8": "catalog:test",
+		"@vitest/eslint-plugin": "catalog:lint",
+		"better-typescript-lib": "catalog:tsc",
+		"bumpp": "catalog:cli",
+		"eslint": "catalog:lint",
+		"eslint-plugin-n": "catalog:lint",
+		"eslint-plugin-pnpm": "catalog:lint",
+		"eslint_d": "catalog:lint",
+		"file-entry-cache": "catalog:dev",
+		"get-tsconfig": "catalog:tsc",
+		"jiti": "catalog:script",
+		"lint-staged": "catalog:lint",
+		"madge": "catalog:dev",
+		"pncat": "catalog:cli",
+		"publint": "catalog:lint",
+		"simple-git-hooks": "catalog:lint",
+		"tsdown": "catalog:build",
+		"type-fest": "catalog:types",
+		"typescript": "catalog:tsc",
+		"unplugin-unused": "catalog:build",
+		"vitest": "catalog:test"
+	},
+	"packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc",
+	"engines": {
+		"node": ">=v24.12.0"
+	}
+}

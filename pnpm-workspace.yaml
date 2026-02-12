@@ -1,0 +1,50 @@
+catalogMode: prefer
+cleanupUnusedCatalogs: true
+shellEmulator: true
+
+packages:
+  - src
+
+patchedDependencies:
+  "@rbxts/jest-globals": patches/@rbxts__jest-globals.patch
+
+catalogs:
+  build:
+    tsdown: 0.20.1
+    unplugin-unused: 0.5.6
+  cli:
+    bumpp: ^10.4.1
+    pncat: ^0.9.1
+  dev:
+    file-entry-cache: ^11.1.2
+    madge: ^8.0.0
+  lint:
+    "@isentinel/eslint-config": ^4.8.1
+    "@vitest/eslint-plugin": ^1.6.7
+    eslint: ^9.39.2
+    eslint-plugin-n: ^17.23.1
+    eslint-plugin-pnpm: ^1.4.3
+    eslint_d: ^14.3.0
+    lint-staged: ^16.2.7
+    publint: ^0.3.15
+    simple-git-hooks: ^2.13.1
+  script:
+    jiti: ^2.6.1
+  test:
+    "@rbxts/jest": ^3.13.3-ts.1
+    "@rbxts/jest-globals": ^3.13.3-ts.1
+    "@vitest/coverage-v8": ^4.0.16
+    vitest: ^4.0.16
+  tsc:
+    "@isentinel/tsconfig": ^1.2.0
+    "@typescript/native-preview": ^7.0.0-dev.20260212.1
+    better-typescript-lib: ^2.12.0
+    get-tsconfig: ^4.13.6
+    typescript: ^5.9.3
+  types:
+    "@rbxts/types": ^1.0.896
+    "@types/node": ^24.10.4
+    type-fest: ^5.2.0
+
+onlyBuiltDependencies:
+  - simple-git-hooks

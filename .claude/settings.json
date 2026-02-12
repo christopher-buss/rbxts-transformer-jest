@@ -1,0 +1,42 @@
+{
+	"includeCoAuthoredBy": true,
+	"permissions": {
+		"allow": [
+			"Bash(gh:*)",
+			"Bash(gh pr:*)",
+			"Bash(gh pr create:*)",
+			"Bash(gh pr view:*)",
+			"Bash(gh run list:*)",
+			"Bash(gh run view:*)",
+			"Glob",
+			"Grep",
+			"LS",
+			"Read",
+			"Read(*)",
+			"TodoWrite",
+			"WebFetch",
+			"WebSearch"
+		],
+		"additionalDirectories": [],
+		"ask": [],
+		"defaultMode": "plan",
+		"deny": []
+	},
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write|MultiEdit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node scripts/type-check.ts"
+					},
+					{
+						"type": "command",
+						"command": "node scripts/lint.ts"
+					}
+				]
+			}
+		]
+	}
+}
