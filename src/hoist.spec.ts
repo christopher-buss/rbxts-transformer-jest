@@ -107,6 +107,28 @@ jest.mock("./foo", () => ({ default: 42 }));
 		expect(transformCode(input)).toMatchSnapshot();
 	});
 
+	it("should not hoist plain function calls", () => {
+		expect.assertions(1);
+
+		const input = `
+import { foo } from "./foo";
+foo("./bar");
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should not hoist non-call expression statements", () => {
+		expect.assertions(1);
+
+		const input = `
+import { foo } from "./foo";
+x = 5;
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
 	it("should pass through unchanged when no jest calls", () => {
 		expect.assertions(1);
 

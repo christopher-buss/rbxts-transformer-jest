@@ -33,14 +33,14 @@ pipeline, validated by unit tests with 100% coverage.
 
 ### Must Have
 
-1. **[REQ-001]**: Hoist jest `mock` and `unmock` above imports
+1. **[REQ-001]** ✅: Hoist jest `mock` and `unmock` above imports
     - Methods: `mock`, `unmock`
     - `deepUnmock`, `enableAutomock`, `disableAutomock` not implemented in
       `@rbxts/jest` — omitted
     - Acceptance: `jest.mock("./foo")` placed after imports → appears before
       imports in output
 
-2. **[REQ-002]**: Keep `@rbxts/jest-globals` import as first statement
+2. **[REQ-002]** ✅: Keep `@rbxts/jest-globals` import as first statement
     - roblox-ts-specific: `@rbxts/jest-globals` must execute before hoisted
       calls so `jest`/`expect` are available
     - Acceptance: Output order is always `@rbxts/jest-globals` import → hoisted
@@ -84,6 +84,11 @@ pipeline, validated by unit tests with 100% coverage.
     (`Array`, `Map`, `Set`, `Object`, etc.) in factories since their imports
     wouldn't be mocked and would remain above hoisted calls
 
+### Nice to Have
+
+11. **[REQ-011]**: Configurable jest module specifier — allow overriding the
+    `@rbxts/jest-globals` module name via plugin config for non-standard setups
+
 ---
 
 ## Technical Notes
@@ -98,7 +103,7 @@ Two-phase approach:
 
 **Transform pipeline:**
 
-```
+```text
 SourceFile statements
   → partition into: jestImport | hoistedVars | hoistedCalls | other
   → reassemble: [jestImport, ...hoistedVars, ...hoistedCalls, ...other]
@@ -149,7 +154,7 @@ Without Babel's scope/binding API, we implement a lightweight scope stack:
 Invalid factory references throw a `ReferenceError` with message matching
 Babel's format:
 
-```
+```text
 The module factory of `jest.mock()` is not allowed to reference any
 out-of-scope variables.
 Invalid variable access: <name>
