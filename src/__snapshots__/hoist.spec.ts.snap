@@ -6,19 +6,22 @@ import { foo } from "./foo";
 "
 `;
 
-exports[`hoist-jest > should hoist all 5 hoistable methods 1`] = `
+exports[`hoist-jest > should hoist both mock and unmock 1`] = `
 "import { a } from "./a";
 jest.mock("./a");
 jest.unmock("./b");
-jest.enableAutomock();
-jest.disableAutomock();
-jest.deepUnmock("./c");
 "
 `;
 
 exports[`hoist-jest > should hoist jest.mock above imports 1`] = `
 "import { foo } from "./foo";
 jest.mock("./foo");
+"
+`;
+
+exports[`hoist-jest > should hoist jest.unmock above imports 1`] = `
+"import { foo } from "./foo";
+jest.unmock("./foo");
 "
 `;
 

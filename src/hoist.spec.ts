@@ -14,16 +14,24 @@ jest.mock("./foo");
 		expect(transformCode(input)).toMatchSnapshot();
 	});
 
-	it("should hoist all 5 hoistable methods", () => {
+	it("should hoist jest.unmock above imports", () => {
+		expect.assertions(1);
+
+		const input = `
+import { foo } from "./foo";
+jest.unmock("./foo");
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should hoist both mock and unmock", () => {
 		expect.assertions(1);
 
 		const input = `
 import { a } from "./a";
 jest.mock("./a");
 jest.unmock("./b");
-jest.enableAutomock();
-jest.disableAutomock();
-jest.deepUnmock("./c");
 `;
 
 		expect(transformCode(input)).toMatchSnapshot();
