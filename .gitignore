@@ -82,3 +82,6 @@ _fixtures
 
 # cspell
 .cspellcache
+
+# claude
+.claude/state

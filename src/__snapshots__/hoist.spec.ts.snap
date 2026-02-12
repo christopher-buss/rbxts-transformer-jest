@@ -1,0 +1,68 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`hoist-jest > should be idempotent when already hoisted 1`] = `
+"jest.mock("./foo");
+import { foo } from "./foo";
+"
+`;
+
+exports[`hoist-jest > should hoist all 5 hoistable methods 1`] = `
+"import { a } from "./a";
+jest.mock("./a");
+jest.unmock("./b");
+jest.enableAutomock();
+jest.disableAutomock();
+jest.deepUnmock("./c");
+"
+`;
+
+exports[`hoist-jest > should hoist jest.mock above imports 1`] = `
+"import { foo } from "./foo";
+jest.mock("./foo");
+"
+`;
+
+exports[`hoist-jest > should hoist mock-prefixed variables 1`] = `
+"import { foo } from "./foo";
+const mockFoo = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+"
+`;
+
+exports[`hoist-jest > should ignore non-jest objects 1`] = `
+"import { foo } from "./foo";
+other.mock("./foo");
+"
+`;
+
+exports[`hoist-jest > should ignore shadowed jest binding 1`] = `
+"import { foo } from "./foo";
+const jest = { mock: () => { } };
+jest.mock("./foo");
+"
+`;
+
+exports[`hoist-jest > should keep @rbxts/jest-globals import first 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+jest.mock("./foo");
+"
+`;
+
+exports[`hoist-jest > should leave non-hoistable jest calls in place 1`] = `
+"import { foo } from "./foo";
+jest.dontMock("./foo");
+"
+`;
+
+exports[`hoist-jest > should pass through unchanged when no jest calls 1`] = `
+"import { foo } from "./foo";
+console.log(foo);
+"
+`;
+
+exports[`hoist-jest > should preserve factory functions in jest.mock 1`] = `
+"import { foo } from "./foo";
+jest.mock("./foo", () => ({ default: 42 }));
+"
+`;

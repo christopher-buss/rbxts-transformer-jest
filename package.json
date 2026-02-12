@@ -21,6 +21,11 @@
 		"prepare": "simple-git-hooks",
 		"prepublishOnly": "nr build",
 		"release": "bumpp",
+		"test": "vitest run --project unit",
+		"test:all": "vitest run",
+		"test:coverage": "vitest run --project unit --coverage",
+		"test:integration": "vitest run --project integration",
+		"test:watch": "vitest --project unit",
 		"typecheck": "tsgo --noEmit",
 		"watch": "tsdown --watch"
 	},
@@ -28,7 +33,7 @@
 		"pre-commit": "pnpm lint-staged"
 	},
 	"lint-staged": {
-		"*": "eslint --fix --cache --no-warn-ignored",
+		"*": "pnpm eslint --fix --cache --no-warn-ignored",
 		"*.ts": ["sh -c 'pnpm tsgo --noEmit'"]
 	},
 	"devDependencies": {
@@ -44,6 +49,7 @@
 		"better-typescript-lib": "catalog:tsc",
 		"bumpp": "catalog:cli",
 		"eslint": "catalog:lint",
+		"eslint-plugin-erasable-syntax-only": "catalog:lint",
 		"eslint-plugin-n": "catalog:lint",
 		"eslint-plugin-pnpm": "catalog:lint",
 		"eslint_d": "catalog:lint",
