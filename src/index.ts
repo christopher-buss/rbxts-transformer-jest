@@ -24,7 +24,12 @@ export function transformer(): ts.TransformerFactory<ts.SourceFile> {
 	return (context) => {
 		return (sourceFile) => {
 			const names = collectJestNames(sourceFile.statements);
-			const { hoisted, jestImport, rest } = partitionStatements(sourceFile.statements, names);
+			const shadowed = collectShadowedNames(sourceFile.statements, names);
+			const filtered = filterShadowed(names, shadowed);
+			const { hoisted, jestImport, rest } = partitionStatements(
+				sourceFile.statements,
+				filtered,
+			);
 
 			return context.factory.updateSourceFile(sourceFile, [
 				...jestImport,
@@ -39,12 +44,12 @@ function collectJestNames(statements: ts.NodeArray<ts.Statement>): JestNames {
 	const tracked = new Set<string>();
 	const namespaces = new Set<string>();
 
-	for (const stmt of statements) {
-		if (!isJestGlobalImport(stmt)) {
+	for (const statement of statements) {
+		if (!isJestGlobalImport(statement)) {
 			continue;
 		}
 
-		const binding = extractJestBinding(stmt);
+		const binding = extractJestBinding(statement);
 		if (binding === undefined) {
 			continue;
 		}
@@ -57,6 +62,32 @@ function collectJestNames(statements: ts.NodeArray<ts.Statement>): JestNames {
 	}
 
 	return { namespaces, tracked };
+}
+
+function collectShadowedNames(
+	statements: ts.NodeArray<ts.Statement>,
+	{ namespaces, tracked }: JestNames,
+): Set<string> {
+	const allTracked = new Set([...namespaces, ...tracked]);
+	const shadowed = new Set<string>();
+
+	for (const statement of statements) {
+		if (ts.isVariableStatement(statement)) {
+			for (const declaration of statement.declarationList.declarations) {
+				if (ts.isIdentifier(declaration.name) && allTracked.has(declaration.name.text)) {
+					shadowed.add(declaration.name.text);
+				}
+			}
+		} else if (
+			ts.isFunctionDeclaration(statement) &&
+			statement.name &&
+			allTracked.has(statement.name.text)
+		) {
+			shadowed.add(statement.name.text);
+		}
+	}
+
+	return shadowed;
 }
 
 function extractJestBinding(node: ts.ImportDeclaration): JestBinding | undefined {
@@ -77,6 +108,17 @@ function extractJestBinding(node: ts.ImportDeclaration): JestBinding | undefined
 	});
 
 	return jestElement ? { name: jestElement.name.text, isNamespace: false } : undefined;
+}
+
+function filterShadowed(names: JestNames, shadowed: Set<string>): JestNames {
+	if (shadowed.size === 0) {
+		return names;
+	}
+
+	return {
+		namespaces: new Set([...names.namespaces].filter((name) => !shadowed.has(name))),
+		tracked: new Set([...names.tracked].filter((name) => !shadowed.has(name))),
+	};
 }
 
 function isHoistableCall(node: ts.Node, names: JestNames): boolean {
@@ -128,13 +170,13 @@ function partitionStatements(
 	const hoisted: Array<ts.Statement> = [];
 	const rest: Array<ts.Statement> = [];
 
-	for (const stmt of statements) {
-		if (isJestGlobalImport(stmt)) {
-			jestImport.push(stmt);
-		} else if (isHoistableCall(stmt, names)) {
-			hoisted.push(stmt);
+	for (const statement of statements) {
+		if (isJestGlobalImport(statement)) {
+			jestImport.push(statement);
+		} else if (isHoistableCall(statement, names)) {
+			hoisted.push(statement);
 		} else {
-			rest.push(stmt);
+			rest.push(statement);
 		}
 	}
 
