@@ -3,7 +3,6 @@ import ts from "typescript";
 const HOIST_METHODS = new Set(["mock", "unmock"]);
 const JEST_MODULE = "@rbxts/jest-globals";
 const JEST_GLOBAL_NAME = "jest";
-const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);
 
 interface JestBinding {
 	readonly name: string;
@@ -65,52 +64,6 @@ function collectJestNames(statements: ts.NodeArray<ts.Statement>): JestNames {
 	return { namespaces, tracked };
 }
 
-function collectLocalBindings(node: ts.Node): Set<string> {
-	const bindings = new Set<string>();
-
-	function walk(child: ts.Node): void {
-		if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isBindingElement(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isParameter(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isFunctionDeclaration(child) && child.name) {
-			bindings.add(child.name.text);
-		} else if (
-			ts.isCatchClause(child) &&
-			child.variableDeclaration &&
-			ts.isIdentifier(child.variableDeclaration.name)
-		) {
-			bindings.add(child.variableDeclaration.name.text);
-		}
-
-		ts.forEachChild(child, walk);
-	}
-
-	ts.forEachChild(node, walk);
-	return bindings;
-}
-
-function collectOuterReferences(factory: ts.Node, localBindings: Set<string>): Set<string> {
-	const outer = new Set<string>();
-
-	function walk(child: ts.Node): void {
-		if (
-			ts.isIdentifier(child) &&
-			isReferencePosition(child) &&
-			!localBindings.has(child.text)
-		) {
-			outer.add(child.text);
-		}
-
-		ts.forEachChild(child, walk);
-	}
-
-	ts.forEachChild(factory, walk);
-	return outer;
-}
-
 function collectShadowedNames(
 	statements: ts.NodeArray<ts.Statement>,
 	{ namespaces, tracked }: JestNames,
@@ -168,10 +121,6 @@ function filterShadowed(names: JestNames, shadowed: Set<string>): JestNames {
 	};
 }
 
-function isAllowedOuterReference(name: string): boolean {
-	return ALLOWED_IDENTIFIERS.has(name) || /^mock/i.test(name) || /^(?:__)?cov/.test(name);
-}
-
 function isHoistableCall(node: ts.Node, names: JestNames): boolean {
 	if (!ts.isExpressionStatement(node)) {
 		return false;
@@ -213,36 +162,6 @@ function isJestGlobalImport(node: ts.Node): node is ts.ImportDeclaration {
 	);
 }
 
-function isReferencePosition(node: ts.Identifier): boolean {
-	const { parent } = node;
-
-	if (ts.isVariableDeclaration(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isParameter(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isPropertyAccessExpression(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isPropertyAssignment(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isFunctionDeclaration(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isBindingElement(parent) && (parent.name === node || parent.propertyName === node)) {
-		return false;
-	}
-
-	return true;
-}
-
 function partitionStatements(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
@@ -255,7 +174,6 @@ function partitionStatements(
 		if (isJestGlobalImport(statement)) {
 			jestImport.push(statement);
 		} else if (isHoistableCall(statement, names)) {
-			validateFactory(statement as ts.ExpressionStatement);
 			hoisted.push(statement);
 		} else {
 			rest.push(statement);
@@ -263,36 +181,4 @@ function partitionStatements(
 	}
 
 	return { hoisted, jestImport, rest };
-}
-
-function validateFactory(statement: ts.ExpressionStatement): void {
-	const call = statement.expression as ts.CallExpression;
-	const callee = call.expression as ts.PropertyAccessExpression;
-
-	if (callee.name.text !== "mock") {
-		return;
-	}
-
-	const factory = call.arguments[1];
-	if (!factory) {
-		return;
-	}
-
-	if (!ts.isFunctionExpression(factory) && !ts.isArrowFunction(factory)) {
-		return;
-	}
-
-	const localBindings = collectLocalBindings(factory);
-	const outerRefs = collectOuterReferences(factory, localBindings);
-
-	for (const name of outerRefs) {
-		if (!isAllowedOuterReference(name)) {
-			throw new Error(
-				"The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.\n" +
-					`Invalid variable access: ${name}\n` +
-					"Allowed objects: expect, jest, Infinity, NaN, undefined.\n" +
-					"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
-			);
-		}
-	}
 }
