@@ -3,12 +3,17 @@ import ts from "typescript";
 import { collectLocalBindings, collectOuterReferences } from "./ast-utils.js";
 import { ALLOWED_IDENTIFIERS, HOIST_METHODS, MOCK_PREFIX } from "./constants.js";
 
+interface MockFactory {
+	factory: ts.ArrowFunction | ts.FunctionExpression;
+	modulePath: string | undefined;
+}
+
 export function collectFactoryMockRefs(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
 ): Set<string> {
 	const refs = new Set<string>();
 	for (const statement of hoisted) {
-		for (const factory of collectMockFactories(statement)) {
+		for (const { factory } of collectMockFactories(statement)) {
 			const local = collectLocalBindings(factory);
 			for (const name of collectOuterReferences(factory, local)) {
 				if (MOCK_PREFIX.test(name)) {
@@ -22,7 +27,7 @@ export function collectFactoryMockRefs(
 }
 
 export function validateFactory(statement: ts.ExpressionStatement): void {
-	for (const factory of collectMockFactories(statement)) {
+	for (const { factory, modulePath } of collectMockFactories(statement)) {
 		const localBindings = collectLocalBindings(factory);
 		for (const name of collectOuterReferences(factory, localBindings)) {
 			if (
@@ -30,8 +35,16 @@ export function validateFactory(statement: ts.ExpressionStatement): void {
 				!MOCK_PREFIX.test(name) &&
 				!/^(?:__)?cov/.test(name)
 			) {
+				const source = statement.getSourceFile().fileName;
+				const { line } = statement
+					.getSourceFile()
+					.getLineAndCharacterOfPosition(statement.getStart());
+				const location =
+					modulePath !== undefined
+						? `jest.mock(${modulePath}) at ${source}:${String(line + 1)}`
+						: `jest.mock() at ${source}:${String(line + 1)}`;
 				throw new Error(
-					"The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.\n" +
+					`[rbxts-jest-transformer] The module factory of \`${location}\` is not allowed to reference any out-of-scope variables.\n` +
 						`Invalid variable access: ${name}\n` +
 						"Allowed objects: expect, jest, Infinity, NaN, undefined.\n" +
 						"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
@@ -41,10 +54,8 @@ export function validateFactory(statement: ts.ExpressionStatement): void {
 	}
 }
 
-function collectMockFactories(
-	statement: ts.ExpressionStatement,
-): Array<ts.ArrowFunction | ts.FunctionExpression> {
-	const factories: Array<ts.ArrowFunction | ts.FunctionExpression> = [];
+function collectMockFactories(statement: ts.ExpressionStatement): Array<MockFactory> {
+	const factories: Array<MockFactory> = [];
 	let node = statement.expression;
 
 	// Walk the chain: jest.mock(...).unmock(...).mock(...)
@@ -56,7 +67,12 @@ function collectMockFactories(
 		if (node.expression.name.text === "mock") {
 			const factory = node.arguments[1];
 			if (factory && (ts.isFunctionExpression(factory) || ts.isArrowFunction(factory))) {
-				factories.push(factory);
+				const firstArgument = node.arguments[0];
+				const modulePath =
+					firstArgument && ts.isStringLiteral(firstArgument)
+						? firstArgument.text
+						: undefined;
+				factories.push({ factory, modulePath });
 			}
 		}
 

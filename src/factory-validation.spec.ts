@@ -123,7 +123,7 @@ jest.mock("./foo", () => someFunction());
 		expect(() => transformCode(input)).toThrowError("someFunction");
 	});
 
-	it("should produce Babel-compatible error message", () => {
+	it("should produce error with module path and location", () => {
 		expect.assertions(1);
 
 		const input = `
@@ -132,7 +132,7 @@ jest.mock("./foo", () => badVar);
 `;
 
 		expect(() => transformCode(input)).toThrowError(
-			/The module factory of `jest\.mock\(\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, jest, Infinity, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\./,
+			/\[rbxts-jest-transformer\] The module factory of `jest\.mock\(\.\/foo\) at .+:\d+` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, jest, Infinity, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\./,
 		);
 	});
 
@@ -302,6 +302,19 @@ jest.mock("./foo", () => (undefined as SomeType));
 `;
 
 		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should show jest.mock() in error when module path is non-literal", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock(someVar, () => badRef);
+`;
+
+		expect(() => transformCode(input)).toThrowError(
+			/\[rbxts-jest-transformer\] The module factory of `jest\.mock\(\) at .+:\d+`/,
+		);
 	});
 
 	it("should skip generic type arguments on calls in factory", () => {
