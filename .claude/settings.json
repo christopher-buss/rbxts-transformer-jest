@@ -17,10 +17,10 @@
 			"WebFetch",
 			"WebSearch"
 		],
-		"additionalDirectories": [],
+		"deny": [],
 		"ask": [],
 		"defaultMode": "plan",
-		"deny": []
+		"additionalDirectories": []
 	},
 	"hooks": {
 		"PostToolUse": [
@@ -38,5 +38,10 @@
 				]
 			}
 		]
+	},
+	"enabledPlugins": {
+		"claude-md-management@claude-plugins-official": true,
+		"code-simplifier@claude-plugins-official": true,
+		"typescript-lsp@claude-plugins-official": true
 	}
 }
