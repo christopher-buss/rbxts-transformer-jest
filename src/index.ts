@@ -1,9 +1,11 @@
+/* eslint-disable max-lines -- TODO: Refactor to reduce complexity */
 import ts from "typescript";
 
 const HOIST_METHODS = new Set(["mock", "unmock"]);
 const JEST_MODULE = "@rbxts/jest-globals";
 const JEST_GLOBAL_NAME = "jest";
 const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);
+const MOCK_PREFIX = /^mock/i;
 
 interface JestBinding {
 	readonly name: string;
@@ -17,6 +19,7 @@ interface JestNames {
 
 interface PartitionResult {
 	readonly hoisted: Array<ts.Statement>;
+	readonly hoistedVariables: Array<ts.Statement>;
 	readonly jestImport: Array<ts.Statement>;
 	readonly rest: Array<ts.Statement>;
 }
@@ -27,13 +30,14 @@ export function transformer(): ts.TransformerFactory<ts.SourceFile> {
 			const names = collectJestNames(sourceFile.statements);
 			const shadowed = collectShadowedNames(sourceFile.statements, names);
 			const filtered = filterShadowed(names, shadowed);
-			const { hoisted, jestImport, rest } = partitionStatements(
+			const { hoisted, hoistedVariables, jestImport, rest } = partitionStatements(
 				sourceFile.statements,
 				filtered,
 			);
 
 			return context.factory.updateSourceFile(sourceFile, [
 				...jestImport,
+				...hoistedVariables,
 				...hoisted,
 				...rest,
 			]);
@@ -41,10 +45,25 @@ export function transformer(): ts.TransformerFactory<ts.SourceFile> {
 	};
 }
 
+function collectFactoryMockRefs(hoisted: ReadonlyArray<ts.ExpressionStatement>): Set<string> {
+	const refs = new Set<string>();
+	for (const statement of hoisted) {
+		for (const factory of collectMockFactories(statement)) {
+			const local = collectLocalBindings(factory);
+			for (const name of collectOuterReferences(factory, local)) {
+				if (MOCK_PREFIX.test(name)) {
+					refs.add(name);
+				}
+			}
+		}
+	}
+
+	return refs;
+}
+
 function collectJestNames(statements: ts.NodeArray<ts.Statement>): JestNames {
 	const tracked = new Set<string>();
 	const namespaces = new Set<string>();
-
 	for (const statement of statements) {
 		if (!isJestGlobalImport(statement)) {
 			continue;
@@ -67,34 +86,47 @@ function collectJestNames(statements: ts.NodeArray<ts.Statement>): JestNames {
 
 function collectLocalBindings(node: ts.Node): Set<string> {
 	const bindings = new Set<string>();
-
 	function walk(child: ts.Node): void {
-		if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isBindingElement(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isParameter(child) && ts.isIdentifier(child.name)) {
-			bindings.add(child.name.text);
-		} else if (ts.isFunctionDeclaration(child) && child.name) {
-			bindings.add(child.name.text);
-		} else if (
-			ts.isCatchClause(child) &&
-			child.variableDeclaration &&
-			ts.isIdentifier(child.variableDeclaration.name)
-		) {
-			bindings.add(child.variableDeclaration.name.text);
+		const name = getBindingName(child);
+		if (name !== undefined) {
+			bindings.add(name);
 		}
 
 		ts.forEachChild(child, walk);
 	}
 
 	ts.forEachChild(node, walk);
+
 	return bindings;
+}
+
+function collectMockFactories(
+	statement: ts.ExpressionStatement,
+): Array<ts.ArrowFunction | ts.FunctionExpression> {
+	const factories: Array<ts.ArrowFunction | ts.FunctionExpression> = [];
+	let node = statement.expression;
+
+	// Walk the chain: jest.mock(...).unmock(...).mock(...)
+	while (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		HOIST_METHODS.has(node.expression.name.text)
+	) {
+		if (node.expression.name.text === "mock") {
+			const factory = node.arguments[1];
+			if (factory && (ts.isFunctionExpression(factory) || ts.isArrowFunction(factory))) {
+				factories.push(factory);
+			}
+		}
+
+		node = node.expression.expression;
+	}
+
+	return factories;
 }
 
 function collectOuterReferences(factory: ts.Node, localBindings: Set<string>): Set<string> {
 	const outer = new Set<string>();
-
 	function walk(child: ts.Node): void {
 		if (
 			ts.isIdentifier(child) &&
@@ -108,6 +140,7 @@ function collectOuterReferences(factory: ts.Node, localBindings: Set<string>): S
 	}
 
 	ts.forEachChild(factory, walk);
+
 	return outer;
 }
 
@@ -117,7 +150,6 @@ function collectShadowedNames(
 ): Set<string> {
 	const allTracked = new Set([...namespaces, ...tracked]);
 	const shadowed = new Set<string>();
-
 	for (const statement of statements) {
 		if (ts.isVariableStatement(statement)) {
 			for (const declaration of statement.declarationList.declarations) {
@@ -157,6 +189,33 @@ function extractJestBinding(node: ts.ImportDeclaration): JestBinding | undefined
 	return jestElement ? { name: jestElement.name.text, isNamespace: false } : undefined;
 }
 
+function extractMockPrefixVariables(
+	rest: ReadonlyArray<ts.Statement>,
+	factoryRefs: ReadonlySet<string>,
+): { hoistedVariables: Array<ts.Statement>; remaining: Array<ts.Statement> } {
+	const hoistedVariables: Array<ts.Statement> = [];
+	const remaining: Array<ts.Statement> = [];
+	for (const statement of rest) {
+		if (
+			ts.isVariableStatement(statement) &&
+			(statement.declarationList.flags & ts.NodeFlags.Const) !== 0 &&
+			statement.declarationList.declarations.every((decl) => {
+				return (
+					ts.isIdentifier(decl.name) &&
+					MOCK_PREFIX.test(decl.name.text) &&
+					factoryRefs.has(decl.name.text)
+				);
+			})
+		) {
+			hoistedVariables.push(statement);
+		} else {
+			remaining.push(statement);
+		}
+	}
+
+	return { hoistedVariables, remaining };
+}
+
 function filterShadowed(names: JestNames, shadowed: Set<string>): JestNames {
 	if (shadowed.size === 0) {
 		return names;
@@ -168,41 +227,70 @@ function filterShadowed(names: JestNames, shadowed: Set<string>): JestNames {
 	};
 }
 
-function isAllowedOuterReference(name: string): boolean {
-	return ALLOWED_IDENTIFIERS.has(name) || /^mock/i.test(name) || /^(?:__)?cov/.test(name);
+function getBindingName(node: ts.Node): string | undefined {
+	if (
+		(ts.isVariableDeclaration(node) || ts.isBindingElement(node) || ts.isParameter(node)) &&
+		ts.isIdentifier(node.name)
+	) {
+		return node.name.text;
+	}
+
+	if (ts.isFunctionDeclaration(node) && node.name) {
+		return node.name.text;
+	}
+
+	if (
+		ts.isCatchClause(node) &&
+		node.variableDeclaration &&
+		ts.isIdentifier(node.variableDeclaration.name)
+	) {
+		return node.variableDeclaration.name.text;
+	}
+
+	return undefined;
 }
 
-function isHoistableCall(node: ts.Node, names: JestNames): boolean {
-	if (!ts.isExpressionStatement(node)) {
+function isHoistableCall(
+	node: ts.Node,
+	names: JestNames,
+): node is ts.CallExpression | ts.ExpressionStatement {
+	if (!ts.isExpressionStatement(node) || !ts.isCallExpression(node.expression)) {
 		return false;
 	}
 
-	const expr = node.expression;
-	if (!ts.isCallExpression(expr)) {
-		return false;
-	}
-
-	const callee = expr.expression;
-	if (!ts.isPropertyAccessExpression(callee) || !HOIST_METHODS.has(callee.name.text)) {
-		return false;
-	}
-
-	return isJestCallee(callee.expression, names);
-}
-
-function isJestCallee(node: ts.Expression, { namespaces, tracked }: JestNames): boolean {
-	// roblox-ts has no global jest — only identifiers tracked from
-	// an @rbxts/jest-globals import binding are recognized.
-	if (ts.isIdentifier(node)) {
-		return tracked.has(node.text);
-	}
+	const { expression: callee } = node.expression;
 
 	return (
+		ts.isPropertyAccessExpression(callee) &&
+		HOIST_METHODS.has(callee.name.text) &&
+		isJestCallee(callee.expression, names)
+	);
+}
+
+function isJestCallee(node: ts.Expression, names: JestNames): boolean {
+	if (ts.isIdentifier(node)) {
+		return names.tracked.has(node.text);
+	}
+
+	if (
 		ts.isPropertyAccessExpression(node) &&
 		ts.isIdentifier(node.expression) &&
 		node.name.text === JEST_GLOBAL_NAME &&
-		namespaces.has(node.expression.text)
-	);
+		names.namespaces.has(node.expression.text)
+	) {
+		return true;
+	}
+
+	// Chained calls: jest.mock('./a').unmock('./b')
+	if (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		HOIST_METHODS.has(node.expression.name.text)
+	) {
+		return isJestCallee(node.expression.expression, names);
+	}
+
+	return false;
 }
 
 function isJestGlobalImport(node: ts.Node): node is ts.ImportDeclaration {
@@ -215,32 +303,17 @@ function isJestGlobalImport(node: ts.Node): node is ts.ImportDeclaration {
 
 function isReferencePosition(node: ts.Identifier): boolean {
 	const { parent } = node;
-
-	if (ts.isVariableDeclaration(parent) && parent.name === node) {
-		return false;
+	if (ts.isBindingElement(parent)) {
+		return parent.name !== node && parent.propertyName !== node;
 	}
 
-	if (ts.isParameter(parent) && parent.name === node) {
-		return false;
-	}
+	const isDeclarationName =
+		((ts.isVariableDeclaration(parent) || ts.isParameter(parent)) && parent.name === node) ||
+		((ts.isPropertyAccessExpression(parent) || ts.isPropertyAssignment(parent)) &&
+			parent.name === node) ||
+		(ts.isFunctionDeclaration(parent) && parent.name === node);
 
-	if (ts.isPropertyAccessExpression(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isPropertyAssignment(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isFunctionDeclaration(parent) && parent.name === node) {
-		return false;
-	}
-
-	if (ts.isBindingElement(parent) && (parent.name === node || parent.propertyName === node)) {
-		return false;
-	}
-
-	return true;
+	return !isDeclarationName;
 }
 
 function partitionStatements(
@@ -248,51 +321,41 @@ function partitionStatements(
 	names: JestNames,
 ): PartitionResult {
 	const jestImport: Array<ts.Statement> = [];
-	const hoisted: Array<ts.Statement> = [];
+	const hoisted: Array<ts.ExpressionStatement> = [];
 	const rest: Array<ts.Statement> = [];
-
 	for (const statement of statements) {
 		if (isJestGlobalImport(statement)) {
 			jestImport.push(statement);
 		} else if (isHoistableCall(statement, names)) {
-			validateFactory(statement as ts.ExpressionStatement);
+			validateFactory(statement);
 			hoisted.push(statement);
 		} else {
 			rest.push(statement);
 		}
 	}
 
-	return { hoisted, jestImport, rest };
+	const factoryRefs = collectFactoryMockRefs(hoisted);
+	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, factoryRefs);
+
+	return { hoisted, hoistedVariables, jestImport, rest: remaining };
 }
 
 function validateFactory(statement: ts.ExpressionStatement): void {
-	const call = statement.expression as ts.CallExpression;
-	const callee = call.expression as ts.PropertyAccessExpression;
-
-	if (callee.name.text !== "mock") {
-		return;
-	}
-
-	const factory = call.arguments[1];
-	if (!factory) {
-		return;
-	}
-
-	if (!ts.isFunctionExpression(factory) && !ts.isArrowFunction(factory)) {
-		return;
-	}
-
-	const localBindings = collectLocalBindings(factory);
-	const outerRefs = collectOuterReferences(factory, localBindings);
-
-	for (const name of outerRefs) {
-		if (!isAllowedOuterReference(name)) {
-			throw new Error(
-				"The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.\n" +
-					`Invalid variable access: ${name}\n` +
-					"Allowed objects: expect, jest, Infinity, NaN, undefined.\n" +
-					"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
-			);
+	for (const factory of collectMockFactories(statement)) {
+		const localBindings = collectLocalBindings(factory);
+		for (const name of collectOuterReferences(factory, localBindings)) {
+			if (
+				!ALLOWED_IDENTIFIERS.has(name) &&
+				!MOCK_PREFIX.test(name) &&
+				!/^(?:__)?cov/.test(name)
+			) {
+				throw new Error(
+					"The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.\n" +
+						`Invalid variable access: ${name}\n` +
+						"Allowed objects: expect, jest, Infinity, NaN, undefined.\n" +
+						"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
+				);
+			}
 		}
 	}
 }

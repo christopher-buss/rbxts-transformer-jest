@@ -133,6 +133,23 @@ jest.mock("./foo", () => ({ someVar: 42 }));
 "
 `;
 
+exports[`hoist-jest > mock-prefix variable hoisting (REQ-006) > should hoist multiple mock-prefix vars 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const mockA = jest.fn();
+const mockB = jest.fn();
+jest.mock("./a", () => ({ a: mockA, b: mockB }));
+import { a } from "./a";
+"
+`;
+
+exports[`hoist-jest > mock-prefix variable hoisting (REQ-006) > should hoist single mock-prefix var referenced in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const mockFoo = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+import { foo } from "./foo";
+"
+`;
+
 exports[`hoist-jest > should be idempotent when already hoisted 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo");
@@ -164,9 +181,9 @@ import { foo } from "./foo";
 
 exports[`hoist-jest > should hoist mock-prefixed variables 1`] = `
 "import { jest } from "@rbxts/jest-globals";
+const mockFoo = jest.fn();
 jest.mock("./foo", () => ({ foo: mockFoo }));
 import { foo } from "./foo";
-const mockFoo = jest.fn();
 "
 `;
 

@@ -53,29 +53,31 @@ through the full roblox-ts VirtualProject pipeline (TS → Lua).
     - roblox-ts has no global jest — only tracked import bindings are recognized
     - Acceptance: All 3 import styles correctly detected
 
-4. **[REQ-004]**: Ignore non-jest objects and shadowed bindings
+4. **[REQ-004]** ✅: Ignore non-jest objects and shadowed bindings
     - `other.mock("./foo")` must not hoist
     - `const jest = {...}; jest.mock()` must not hoist
     - Requires scope stack to detect shadowing (no Babel scope API available)
     - Acceptance: Non-jest and shadowed calls remain in original position
 
-5. **[REQ-005]**: Validate factory function purity
+5. **[REQ-005]** ✅: Validate factory function purity
     - `jest.mock("./foo", () => ...)` factory must only reference allowed
       identifiers, `mock`-prefixed vars, or `jest`/`expect`
     - Invalid factories throw a compile error (match Babel behavior)
     - Acceptance: Invalid factory refs throw, valid ones hoist
 
-6. **[REQ-006]**: Hoist mock-prefixed variables
+6. **[REQ-006]** ✅: Hoist mock-prefixed variables
     - Variables matching `/^mock/i` referenced in factories hoist alongside the
       `jest.mock` call
+    - Only `const` declarations hoist (not `let`/`var`)
     - Acceptance: `const mockFoo = jest.fn(); jest.mock("./foo", () => mockFoo)`
       → both hoist above imports
 
 7. **[REQ-007]**: Block scope hoisting — hoist within function/block bodies, not
    just top-level (matches Babel behavior which hoists in every BlockStatement)
 
-8. **[REQ-008]**: Chained call support — `jest.unmock('./a').unmock('./b')`
+8. **[REQ-008]** ✅: Chained call support — `jest.unmock('./a').unmock('./b')`
    treated as single hoistable statement (recursive jest object extraction)
+    - Factory validation and mock-prefix var hoisting also work through chains
 
 ### Should Have
 
@@ -183,18 +185,18 @@ with `mock` (case insensitive) are permitted.
 - Implement shadowed binding detection (scope stack)
 - Update snapshot tests
 
-**Phase 2 — Validation & variables:**
+**Phase 2 — Validation & variables:** ✅
 
 - Port factory purity validation from babel (minimal allowlist)
-- Implement mock-prefixed variable hoisting (`/^mock/i`)
+- Implement mock-prefixed variable hoisting (`/^mock/i`, `const` only)
 - Throw on invalid factory references
-- Add block scope hoisting
-
-**Phase 3 — Edge cases:**
-
 - Chained call support (recursive jest object extraction)
-- Pure constant hoisting
-- Polyfill-aware allowlist expansion
+
+**Phase 3 — Block scope & edge cases:**
+
+- Add block scope hoisting (REQ-007)
+- Pure constant hoisting (REQ-009)
+- Polyfill-aware allowlist expansion (REQ-010)
 
 ---
 
