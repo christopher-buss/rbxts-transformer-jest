@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`shadowing > should ignore shadowed jest binding 1`] = `
+"import { foo } from "./foo";
+const jest = { mock: () => { } };
+jest.mock("./foo");
+"
+`;

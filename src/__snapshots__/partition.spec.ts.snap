@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist multiple mock-prefix vars 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const mockA = jest.fn();
+const mockB = jest.fn();
+jest.mock("./a", () => ({ a: mockA, b: mockB }));
+import { a } from "./a";
+"
+`;
+
+exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist single mock-prefix var referenced in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const mockFoo = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > should be idempotent when already hoisted 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo");
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > should hoist both mock and unmock 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./a");
+jest.unmock("./b");
+import { a } from "./a";
+"
+`;
+
+exports[`partition > should hoist jest.mock above imports 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo");
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > should hoist jest.unmock above imports 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.unmock("./foo");
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > should ignore non-jest objects 1`] = `
+"import { foo } from "./foo";
+other.mock("./foo");
+"
+`;
+
+exports[`partition > should keep @rbxts/jest-globals import first 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo");
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > should leave non-hoistable jest calls in place 1`] = `
+"import { foo } from "./foo";
+jest.dontMock("./foo");
+"
+`;
+
+exports[`partition > should not hoist non-call expression statements 1`] = `
+"import { foo } from "./foo";
+x = 5;
+"
+`;
+
+exports[`partition > should not hoist plain function calls 1`] = `
+"import { foo } from "./foo";
+foo("./bar");
+"
+`;
+
+exports[`partition > should pass through unchanged when no jest calls 1`] = `
+"import { foo } from "./foo";
+console.log(foo);
+"
+`;
+
+exports[`partition > should preserve factory functions in jest.mock 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ default: 42 }));
+import { foo } from "./foo";
+"
+`;
