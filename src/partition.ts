@@ -5,11 +5,42 @@ import { HOIST_METHODS, JEST_GLOBAL_NAME, MOCK_PREFIX } from "./constants.js";
 import type { JestNames } from "./constants.js";
 import { collectFactoryMockRefs, validateFactory } from "./factory-validation.js";
 
+export interface BlockPartitionResult {
+	readonly hoisted: Array<ts.Statement>;
+	readonly hoistedVariables: Array<ts.Statement>;
+	readonly rest: Array<ts.Statement>;
+}
+
 export interface PartitionResult {
 	readonly hoisted: Array<ts.Statement>;
 	readonly hoistedVariables: Array<ts.Statement>;
 	readonly jestImport: Array<ts.Statement>;
 	readonly rest: Array<ts.Statement>;
+}
+
+export function partitionBlock(
+	statements: ts.NodeArray<ts.Statement>,
+	names: JestNames,
+): BlockPartitionResult | undefined {
+	const hoisted: Array<ts.ExpressionStatement> = [];
+	const rest: Array<ts.Statement> = [];
+	for (const statement of statements) {
+		if (isHoistableCall(statement, names)) {
+			validateFactory(statement);
+			hoisted.push(statement);
+		} else {
+			rest.push(statement);
+		}
+	}
+
+	if (hoisted.length === 0) {
+		return undefined;
+	}
+
+	const factoryRefs = collectFactoryMockRefs(hoisted);
+	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, factoryRefs);
+
+	return { hoisted, hoistedVariables, rest: remaining };
 }
 
 export function partitionStatements(

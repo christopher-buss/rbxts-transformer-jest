@@ -1,5 +1,101 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`partition > block scope hoisting (REQ-007) > should handle chained calls within block 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function setup() {
+    jest.mock("./a").unmock("./b");
+    console.log("before");
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist in beforeEach callback 1`] = `
+"import { jest, beforeEach } from "@rbxts/jest-globals";
+beforeEach(() => {
+    jest.mock("./foo");
+    jest.mock("./bar");
+    console.log("setup");
+});
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock in nested blocks 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function outer() {
+    if (true) {
+        jest.mock("./foo");
+        console.log("before");
+    }
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within arrow function body 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const setup = () => {
+    jest.mock("./foo");
+    console.log("before");
+};
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within catch block 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+try { }
+catch (e) {
+    jest.mock("./foo");
+    console.log("before");
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within function body 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function setup() {
+    jest.mock("./foo");
+    console.log("before");
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within if block body 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+if (true) {
+    jest.mock("./foo");
+    console.log("hello");
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within try block 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+try {
+    jest.mock("./foo");
+    console.log("before");
+}
+catch (e) { }
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should hoist mock-prefix vars within block 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function setup() {
+    const mockFoo = jest.fn();
+    jest.mock("./foo", () => ({ foo: mockFoo }));
+    console.log("between");
+}
+"
+`;
+
+exports[`partition > block scope hoisting (REQ-007) > should leave block unchanged when no hoistable calls 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function setup() {
+    console.log("hello");
+    const x = 1;
+}
+"
+`;
+
 exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist multiple mock-prefix vars 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 const mockA = jest.fn();

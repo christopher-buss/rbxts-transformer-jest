@@ -320,4 +320,180 @@ JG.jest.mock("./a").unmock("./b");
 			expect(result).toMatch(/^import \* as JG.*\nJG\.jest\.mock.*\.unmock/);
 		});
 	});
+
+	describe("block scope hoisting (REQ-007)", () => {
+		it("should hoist jest.mock within if block body", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+if (true) {
+  jest.mock("./foo");
+  console.log("hello");
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist jest.mock within function body", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  console.log("before");
+  jest.mock("./foo");
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist jest.mock within arrow function body", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+const setup = () => {
+  console.log("before");
+  jest.mock("./foo");
+};
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist jest.mock within try block", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+try {
+  console.log("before");
+  jest.mock("./foo");
+} catch (e) {}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist jest.mock within catch block", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+try {} catch (e) {
+  console.log("before");
+  jest.mock("./foo");
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist jest.mock in nested blocks", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function outer() {
+  if (true) {
+    console.log("before");
+    jest.mock("./foo");
+  }
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should not escape block scope to parent", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+console.log("top level");
+if (true) {
+  jest.mock("./foo");
+}
+`;
+
+			const result = transformCode(input);
+
+			// jest.mock should stay inside the if block, not escape to top level
+			expect(result).toMatch(/console\.log\("top level"\);\nif \(true\) \{\n\s+jest\.mock/);
+		});
+
+		it("should hoist mock-prefix vars within block", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  const mockFoo = jest.fn();
+  console.log("between");
+  jest.mock("./foo", () => ({ foo: mockFoo }));
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should validate factory within block", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  jest.mock("./foo", () => badRef);
+}
+`;
+
+			expect(() => transformCode(input)).toThrowError("badRef");
+		});
+
+		it("should handle chained calls within block", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  console.log("before");
+  jest.mock("./a").unmock("./b");
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should leave block unchanged when no hoistable calls", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  console.log("hello");
+  const x = 1;
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist in beforeEach callback", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest, beforeEach } from "@rbxts/jest-globals";
+beforeEach(() => {
+  console.log("setup");
+  jest.mock("./foo");
+  jest.mock("./bar");
+});
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+	});
 });
