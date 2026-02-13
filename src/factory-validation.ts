@@ -35,18 +35,12 @@ export function validateFactory(statement: ts.ExpressionStatement): void {
 				!MOCK_PREFIX.test(name) &&
 				!/^(?:__)?cov/.test(name)
 			) {
-				const source = statement.getSourceFile().fileName;
-				const { line } = statement
-					.getSourceFile()
-					.getLineAndCharacterOfPosition(statement.getStart());
-				const location =
-					modulePath !== undefined
-						? `jest.mock(${modulePath}) at ${source}:${String(line + 1)}`
-						: `jest.mock() at ${source}:${String(line + 1)}`;
+				const mockTarget =
+					modulePath !== undefined ? `jest.mock(${modulePath})` : "jest.mock()";
 				throw new Error(
-					`[rbxts-jest-transformer] The module factory of \`${location}\` is not allowed to reference any out-of-scope variables.\n` +
+					`[rbxts-jest-transformer] The module factory of \`${mockTarget}\` is not allowed to reference any out-of-scope variables.\n` +
 						`Invalid variable access: ${name}\n` +
-						"Allowed objects: expect, jest, Infinity, NaN, undefined.\n" +
+						`Allowed objects: ${[...ALLOWED_IDENTIFIERS].join(", ")}.\n` +
 						"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
 				);
 			}

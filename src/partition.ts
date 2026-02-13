@@ -38,7 +38,9 @@ export function partitionBlock(
 	}
 
 	const factoryRefs = collectFactoryMockRefs(hoisted);
-	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, factoryRefs);
+	const argumentRefs = collectCallArgumentMockRefs(hoisted);
+	const allRefs = new Set([...argumentRefs, ...factoryRefs]);
+	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, allRefs);
 
 	return { hoisted, hoistedVariables, rest: remaining };
 }
@@ -62,9 +64,33 @@ export function partitionStatements(
 	}
 
 	const factoryRefs = collectFactoryMockRefs(hoisted);
-	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, factoryRefs);
+	const argumentRefs = collectCallArgumentMockRefs(hoisted);
+	const allRefs = new Set([...argumentRefs, ...factoryRefs]);
+	const { hoistedVariables, remaining } = extractMockPrefixVariables(rest, allRefs);
 
 	return { hoisted, hoistedVariables, jestImport, rest: remaining };
+}
+
+function collectCallArgumentMockRefs(hoisted: ReadonlyArray<ts.ExpressionStatement>): Set<string> {
+	const refs = new Set<string>();
+	for (const statement of hoisted) {
+		let node = statement.expression;
+		while (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression) &&
+			HOIST_METHODS.has(node.expression.name.text)
+		) {
+			for (const argument of node.arguments) {
+				if (ts.isIdentifier(argument) && MOCK_PREFIX.test(argument.text)) {
+					refs.add(argument.text);
+				}
+			}
+
+			node = node.expression.expression;
+		}
+	}
+
+	return refs;
 }
 
 function extractMockPrefixVariables(

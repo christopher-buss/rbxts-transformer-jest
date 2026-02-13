@@ -78,6 +78,18 @@ describe("integration: hoist-jest through roblox-ts pipeline", () => {
 		expect(luau).toMatchSnapshot();
 	});
 
+	it("should throw on factory referencing out-of-scope variable", () => {
+		expect.assertions(1);
+
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			import { foo } from "./foo";
+			jest.mock("./foo" as unknown as ModuleScript, () => foo);
+		`;
+
+		expect(() => compile(source)).toThrowError(/rbxts-jest-transformer/);
+	});
+
 	it("should preserve order of multiple mocks and un-mocks", () => {
 		expect.assertions(1);
 

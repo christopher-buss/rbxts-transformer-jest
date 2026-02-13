@@ -223,6 +223,21 @@ jest.mock("./foo");
 		});
 	});
 
+	it("should hoist mock-prefix var used as first arg to jest.mock", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const mockPath = "some-path";
+jest.mock(mockPath, () => ({}));
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/const mockPath.*\njest\.mock/);
+	});
+
 	describe("chained calls (REQ-008)", () => {
 		it("should hoist chained unmock calls", () => {
 			expect.assertions(1);
