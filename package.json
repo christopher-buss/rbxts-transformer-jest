@@ -8,10 +8,11 @@
 	"sideEffects": false,
 	"type": "module",
 	"exports": {
-		".": "./dist/index.mjs",
+		".": "./dist/index.cjs",
 		"./package.json": "./package.json"
 	},
-	"types": "./dist/index.d.mts",
+	"main": "./dist/index.cjs",
+	"types": "./dist/index.d.cts",
 	"files": ["dist", "!dist/**/*.tsbuildinfo"],
 	"scripts": {
 		"build": "tsdown",

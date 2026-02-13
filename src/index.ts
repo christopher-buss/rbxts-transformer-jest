@@ -5,7 +5,7 @@ import type { JestNames } from "./constants.js";
 import { partitionBlock, partitionStatements } from "./partition.js";
 import { collectShadowedNames, filterShadowed } from "./shadowing.js";
 
-export function transformer(): ts.TransformerFactory<ts.SourceFile> {
+export default function transformer(): ts.TransformerFactory<ts.SourceFile> {
 	return (context) => {
 		return (sourceFile) => {
 			const names = collectJestNames(sourceFile.statements);

@@ -7,7 +7,7 @@ export default defineConfig({
 	exports: true,
 	external: ["typescript"],
 	fixedExtension: true,
-	format: ["esm"],
+	format: ["cjs"],
 	publint: true,
 	shims: true,
 	target: ["node24"],

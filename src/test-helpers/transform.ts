@@ -1,6 +1,6 @@
 import ts from "typescript";
 
-import { transformer } from "../index.js";
+import transformer from "../index.js";
 
 // eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
 const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });

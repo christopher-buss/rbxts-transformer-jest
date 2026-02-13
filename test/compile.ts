@@ -2,7 +2,7 @@
 import { resolve } from "node:path/posix";
 import { VirtualProject } from "roblox-ts";
 
-import { transformer } from "../src/index.js";
+import transformer from "../src/index.js";
 
 export function compile(source: string): string {
 	const project = new VirtualProject();
