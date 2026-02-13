@@ -281,4 +281,37 @@ jest.mock("./foo", () => { const [, b] = [1, 2]; return b; });
 
 		expect(transformCode(input)).toMatchSnapshot();
 	});
+
+	it("should skip type-annotated parameters in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => (_self: unknown, action: string, entity: Entity) => {});
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should skip as-cast types in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => (undefined as SomeType));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should skip generic type arguments on calls in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock<SomeType>("./foo", () => ({}));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
 });

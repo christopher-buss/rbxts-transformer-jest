@@ -127,8 +127,26 @@ import { foo } from "./foo";
 "
 `;
 
+exports[`factory-validation > should skip as-cast types in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => (undefined as SomeType));
+"
+`;
+
+exports[`factory-validation > should skip generic type arguments on calls in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock<SomeType>("./foo", () => ({}));
+"
+`;
+
 exports[`factory-validation > should skip property names in object literals 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo", () => ({ someVar: 42 }));
+"
+`;
+
+exports[`factory-validation > should skip type-annotated parameters in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => (_self: unknown, action: string, entity: Entity) => { });
 "
 `;

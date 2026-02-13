@@ -19,6 +19,10 @@ export function collectLocalBindings(node: ts.Node): Set<string> {
 export function collectOuterReferences(factory: ts.Node, localBindings: Set<string>): Set<string> {
 	const outer = new Set<string>();
 	function walk(child: ts.Node): void {
+		if (ts.isTypeNode(child)) {
+			return;
+		}
+
 		if (
 			ts.isIdentifier(child) &&
 			isReferencePosition(child) &&
