@@ -7,6 +7,7 @@ describe("hoist-jest", () => {
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 import { foo } from "./foo";
 jest.mock("./foo");
 `;
@@ -18,6 +19,7 @@ jest.mock("./foo");
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 import { foo } from "./foo";
 jest.unmock("./foo");
 `;
@@ -29,6 +31,7 @@ jest.unmock("./foo");
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 import { a } from "./a";
 jest.mock("./a");
 jest.unmock("./b");
@@ -53,6 +56,7 @@ jest.mock("./foo");
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 import { foo } from "./foo";
 const mockFoo = jest.fn();
 jest.mock("./foo", () => ({ foo: mockFoo }));
@@ -100,6 +104,7 @@ other.mock("./foo");
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 import { foo } from "./foo";
 jest.mock("./foo", () => ({ default: 42 }));
 `;
@@ -144,6 +149,7 @@ console.log(foo);
 		expect.assertions(1);
 
 		const input = `
+import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo");
 import { foo } from "./foo";
 `;
@@ -193,7 +199,7 @@ JG.mock("./foo");
 		expect(result).toMatch(/import.*foo.*\nJG\.mock/);
 	});
 
-	it("should treat side-effect jest-globals import as no binding", () => {
+	it("should not hoist with side-effect jest-globals import (no binding)", () => {
 		expect.assertions(1);
 
 		const input = `
@@ -204,10 +210,10 @@ jest.mock("./foo");
 
 		const result = transformCode(input);
 
-		expect(result).toMatch(/^import "@rbxts\/jest-globals";\njest\.mock/);
+		expect(result).toMatch(/import.*foo.*\njest\.mock/);
 	});
 
-	it("should treat non-jest named import as no binding", () => {
+	it("should not hoist with non-jest named import (no binding)", () => {
 		expect.assertions(1);
 
 		const input = `
@@ -218,10 +224,10 @@ jest.mock("./foo");
 
 		const result = transformCode(input);
 
-		expect(result).toMatch(/^import.*describe.*\njest\.mock/);
+		expect(result).toMatch(/import.*foo.*\njest\.mock/);
 	});
 
-	it("should hoist global jest when no imports", () => {
+	it("should not hoist when no jest-globals import exists", () => {
 		expect.assertions(1);
 
 		const input = `
@@ -231,6 +237,6 @@ jest.mock("./foo");
 
 		const result = transformCode(input);
 
-		expect(result).toMatch(/^jest\.mock.*\nimport/);
+		expect(result).toMatch(/import.*foo.*\njest\.mock/);
 	});
 });

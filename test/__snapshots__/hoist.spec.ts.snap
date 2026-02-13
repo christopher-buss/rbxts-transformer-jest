@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should compile aliased jest import correctly 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local j = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "jest-globals", "src").jest
+j.mock("./foo")
+local foo = TS.import(script, script.Parent, "foo").foo
+print(foo)
+return nil
+"
+`;
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should compile namespace import correctly 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local JG = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "jest-globals", "src")
+JG.jest.mock("./foo")
+local foo = TS.import(script, script.Parent, "foo").foo
+print(foo)
+return nil
+"
+`;
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should hoist jest.mock above require in Lua output 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local jest = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "jest-globals", "src").jest
+jest.mock("./foo")
+local foo = TS.import(script, script.Parent, "foo").foo
+print(foo)
+return nil
+"
+`;
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should pass through unchanged when no jest calls 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local foo = TS.import(script, script.Parent, "foo").foo
+local _x = foo
+return nil
+"
+`;
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should preserve order of multiple mocks and un-mocks 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local jest = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "jest-globals", "src").jest
+jest.mock("./a")
+jest.unmock("./b")
+jest.mock("./b")
+local a = TS.import(script, script.Parent, "a").a
+local b = TS.import(script, script.Parent, "b").b
+print(a, b)
+return nil
+"
+`;

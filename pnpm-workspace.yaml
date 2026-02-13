@@ -1,5 +1,10 @@
 catalogMode: prefer
 cleanupUnusedCatalogs: true
+
+publicHoistPattern:
+  - "@typescript/*"
+  - vite
+
 shellEmulator: true
 
 packages:
@@ -7,6 +12,7 @@ packages:
 
 patchedDependencies:
   "@rbxts/jest-globals": patches/@rbxts__jest-globals.patch
+  roblox-ts: patches/roblox-ts.patch
 
 catalogs:
   build:
@@ -18,6 +24,9 @@ catalogs:
   dev:
     file-entry-cache: ^11.1.2
     madge: ^8.0.0
+  integration:
+    "@rbxts/compiler-types": 3.0.0-types.0
+    roblox-ts: ^3.0.0
   lint:
     "@isentinel/eslint-config": ^4.8.1
     "@vitest/eslint-plugin": ^1.6.7
@@ -41,7 +50,7 @@ catalogs:
     "@typescript/native-preview": 7.0.0-dev.20260212.1
     better-typescript-lib: ^2.12.0
     get-tsconfig: ^4.13.6
-    typescript: ^5.9.3
+    typescript: ~5.8.2
   types:
     "@rbxts/types": ^1.0.907
     "@types/node": ^24.10.13

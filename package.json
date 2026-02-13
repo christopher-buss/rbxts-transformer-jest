@@ -39,6 +39,7 @@
 	"devDependencies": {
 		"@isentinel/eslint-config": "catalog:lint",
 		"@isentinel/tsconfig": "catalog:tsc",
+		"@rbxts/compiler-types": "catalog:integration",
 		"@rbxts/jest": "catalog:test",
 		"@rbxts/jest-globals": "catalog:test",
 		"@rbxts/types": "catalog:types",
@@ -60,6 +61,7 @@
 		"madge": "catalog:dev",
 		"pncat": "catalog:cli",
 		"publint": "catalog:lint",
+		"roblox-ts": "catalog:integration",
 		"simple-git-hooks": "catalog:lint",
 		"tsdown": "catalog:build",
 		"type-fest": "catalog:types",

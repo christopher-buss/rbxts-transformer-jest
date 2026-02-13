@@ -1,32 +1,37 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`hoist-jest > should be idempotent when already hoisted 1`] = `
-"jest.mock("./foo");
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo");
 import { foo } from "./foo";
 "
 `;
 
 exports[`hoist-jest > should hoist both mock and unmock 1`] = `
-"jest.mock("./a");
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./a");
 jest.unmock("./b");
 import { a } from "./a";
 "
 `;
 
 exports[`hoist-jest > should hoist jest.mock above imports 1`] = `
-"jest.mock("./foo");
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo");
 import { foo } from "./foo";
 "
 `;
 
 exports[`hoist-jest > should hoist jest.unmock above imports 1`] = `
-"jest.unmock("./foo");
+"import { jest } from "@rbxts/jest-globals";
+jest.unmock("./foo");
 import { foo } from "./foo";
 "
 `;
 
 exports[`hoist-jest > should hoist mock-prefixed variables 1`] = `
-"jest.mock("./foo", () => ({ foo: mockFoo }));
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ foo: mockFoo }));
 import { foo } from "./foo";
 const mockFoo = jest.fn();
 "
@@ -39,9 +44,9 @@ other.mock("./foo");
 `;
 
 exports[`hoist-jest > should ignore shadowed jest binding 1`] = `
-"jest.mock("./foo");
-import { foo } from "./foo";
+"import { foo } from "./foo";
 const jest = { mock: () => { } };
+jest.mock("./foo");
 "
 `;
 
@@ -77,7 +82,8 @@ console.log(foo);
 `;
 
 exports[`hoist-jest > should preserve factory functions in jest.mock 1`] = `
-"jest.mock("./foo", () => ({ default: 42 }));
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ default: 42 }));
 import { foo } from "./foo";
 "
 `;

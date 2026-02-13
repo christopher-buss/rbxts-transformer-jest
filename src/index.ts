@@ -21,12 +21,16 @@ interface PartitionResult {
 }
 
 export function transformer(): ts.TransformerFactory<ts.SourceFile> {
-	return () => {
+	return (context) => {
 		return (sourceFile) => {
 			const names = collectJestNames(sourceFile.statements);
 			const { hoisted, jestImport, rest } = partitionStatements(sourceFile.statements, names);
 
-			return ts.factory.updateSourceFile(sourceFile, [...jestImport, ...hoisted, ...rest]);
+			return context.factory.updateSourceFile(sourceFile, [
+				...jestImport,
+				...hoisted,
+				...rest,
+			]);
 		};
 	};
 }
@@ -94,9 +98,10 @@ function isHoistableCall(node: ts.Node, names: JestNames): boolean {
 }
 
 function isJestCallee(node: ts.Expression, { namespaces, tracked }: JestNames): boolean {
+	// roblox-ts has no global jest — only identifiers tracked from
+	// an @rbxts/jest-globals import binding are recognized.
 	if (ts.isIdentifier(node)) {
-		const hasImports = tracked.size > 0 || namespaces.size > 0;
-		return hasImports ? tracked.has(node.text) : node.text === JEST_GLOBAL_NAME;
+		return tracked.has(node.text);
 	}
 
 	return (

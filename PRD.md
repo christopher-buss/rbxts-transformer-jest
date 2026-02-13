@@ -25,7 +25,8 @@ needed.
 ### Success Metric
 
 All hoistable jest methods correctly reordered in roblox-ts compilation
-pipeline, validated by unit tests with 100% coverage.
+pipeline, validated by unit tests with 100% coverage and integration tests
+through the full roblox-ts VirtualProject pipeline (TS → Lua).
 
 ---
 
@@ -46,11 +47,11 @@ pipeline, validated by unit tests with 100% coverage.
     - Acceptance: Output order is always `@rbxts/jest-globals` import → hoisted
       calls → other imports → rest
 
-3. **[REQ-003]**: Detect jest calls via import tracking
+3. **[REQ-003]** ✅: Detect jest calls via import tracking
     - Support named (`import { jest }`), aliased (`import { jest as j }`), and
       namespace (`import * as JG`) imports from `@rbxts/jest-globals`
-    - Also support global `jest` identifier (no binding in scope)
-    - Acceptance: All 3 import styles + global correctly detected
+    - roblox-ts has no global jest — only tracked import bindings are recognized
+    - Acceptance: All 3 import styles correctly detected
 
 4. **[REQ-004]**: Ignore non-jest objects and shadowed bindings
     - `other.mock("./foo")` must not hoist
@@ -201,8 +202,8 @@ with `mock` (case insensitive) are permitted.
 
 - Babel AST / babel plugin compatibility
 - `_getJestObj()` getter pattern (roblox-ts has no dynamic require)
-- Integration test tier (Tier 2 with patched roblox-ts VirtualProject) —
-  deferred
+- ~~Integration test tier (Tier 2 with patched roblox-ts VirtualProject)~~ —
+  implemented via `test/compile.ts` + `test/hoist.spec.ts`
 - `jest.requireActual` / `jest.requireMock` support
 - JSX/TSX-specific handling
 
