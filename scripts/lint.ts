@@ -143,7 +143,7 @@ invalidateCacheEntries(importers);
 
 try {
 	// cspell:ignore eslint_d
-	execSync(`pnpm exec eslint_d --cache --fix "${filePath}"`, {
+	execSync(`pnpm exec eslint_d --cache --fix "${filePath} --max-warnings 0"`, {
 		env: { ...process.env, ESLINT_IN_EDITOR: "true" },
 		stdio: "pipe",
 	});
