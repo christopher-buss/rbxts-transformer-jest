@@ -16,11 +16,11 @@ export default function transformer(): ts.TransformerFactory<ts.SourceFile> {
 				const visited = ts.visitEachChild(node, visitor, context);
 
 				if (ts.isSourceFile(visited)) {
-					return visitSourceFile(visited, filtered, context.factory);
+					return visitSourceFile(visited, filtered, context.factory, sourceFile);
 				}
 
 				if (ts.isBlock(visited)) {
-					return visitBlock(visited, filtered, context.factory);
+					return visitBlock(visited, filtered, context.factory, sourceFile);
 				}
 
 				return visited;
@@ -31,8 +31,13 @@ export default function transformer(): ts.TransformerFactory<ts.SourceFile> {
 	};
 }
 
-function visitBlock(node: ts.Block, names: JestNames, factory: ts.NodeFactory): ts.Block {
-	const result = partitionBlock(node.statements, names);
+function visitBlock(
+	node: ts.Block,
+	names: JestNames,
+	factory: ts.NodeFactory,
+	sourceFile: ts.SourceFile,
+): ts.Block {
+	const result = partitionBlock(node.statements, names, sourceFile);
 	if (!result) {
 		return node;
 	}
@@ -48,14 +53,17 @@ function visitSourceFile(
 	node: ts.SourceFile,
 	names: JestNames,
 	factory: ts.NodeFactory,
+	sourceFile: ts.SourceFile,
 ): ts.SourceFile {
-	const { hoisted, hoistedVariables, jestImport, rest } = partitionStatements(
+	const { dependencyImports, hoisted, hoistedVariables, jestImport, rest } = partitionStatements(
 		node.statements,
 		names,
+		sourceFile,
 	);
 
 	return factory.updateSourceFile(node, [
 		...jestImport,
+		...dependencyImports,
 		...hoistedVariables,
 		...hoisted,
 		...rest,

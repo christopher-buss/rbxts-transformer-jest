@@ -1,5 +1,7 @@
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import transformer from "./index.js";
 import { transformCode } from "./test-helpers/transform.js";
 
 describe("factory-validation", () => {
@@ -132,7 +134,7 @@ jest.mock("./foo", () => badVar);
 `;
 
 		expect(() => transformCode(input)).toThrowError(
-			/\[rbxts-jest-transformer\] The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, Infinity, jest, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\./,
+			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, Infinity, jest, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\./,
 		);
 	});
 
@@ -304,6 +306,45 @@ jest.mock("./foo", () => (undefined as SomeType));
 		expect(transformCode(input)).toMatchSnapshot();
 	});
 
+	it("should include file:line in error when prior transformer breaks parent pointers", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => badRef);
+`;
+
+		const sourceFile = ts.createSourceFile("test.ts", input, ts.ScriptTarget.ESNext, true);
+
+		/**
+		 * Simulates roblox-ts pipeline: recreates nodes, breaking parent
+		 * pointers so getSourceFile() returns undefined.
+		 *
+		 * @param ctx - Transformation context.
+		 * @returns Transformer that breaks parent pointers.
+		 */
+		function breakParents(ctx: ts.TransformationContext) {
+			return (sf: ts.SourceFile) => {
+				function visitor(node: ts.Node): ts.Node {
+					if (ts.isExpressionStatement(node)) {
+						return ts.setTextRange(
+							ctx.factory.createExpressionStatement(node.expression),
+							node,
+						);
+					}
+
+					return ts.visitEachChild(node, visitor, ctx);
+				}
+
+				return ts.visitNode(sf, visitor) as ts.SourceFile;
+			};
+		}
+
+		expect(() => ts.transform(sourceFile, [breakParents, transformer()])).toThrowError(
+			/test\.ts:3/,
+		);
+	});
+
 	it("should show jest.mock() in error when module path is non-literal", () => {
 		expect.assertions(1);
 
@@ -313,7 +354,7 @@ jest.mock(someVar, () => badRef);
 `;
 
 		expect(() => transformCode(input)).toThrowError(
-			/\[rbxts-jest-transformer\] The module factory of `jest\.mock\(\)` is not allowed/,
+			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\)` is not allowed/,
 		);
 	});
 

@@ -26,23 +26,21 @@ export function collectFactoryMockRefs(
 	return refs;
 }
 
-export function validateFactory(statement: ts.ExpressionStatement): void {
+export function validateFactory(
+	statement: ts.ExpressionStatement,
+	sourceFile: ts.SourceFile,
+	importBindings: ReadonlySet<string>,
+): void {
 	for (const { factory, modulePath } of collectMockFactories(statement)) {
 		const localBindings = collectLocalBindings(factory);
 		for (const name of collectOuterReferences(factory, localBindings)) {
 			if (
 				!ALLOWED_IDENTIFIERS.has(name) &&
 				!MOCK_PREFIX.test(name) &&
-				!/^(?:__)?cov/.test(name)
+				!/^(?:__)?cov/.test(name) &&
+				!importBindings.has(name)
 			) {
-				const mockTarget =
-					modulePath !== undefined ? `jest.mock(${modulePath})` : "jest.mock()";
-				throw new Error(
-					`[rbxts-jest-transformer] The module factory of \`${mockTarget}\` is not allowed to reference any out-of-scope variables.\n` +
-						`Invalid variable access: ${name}\n` +
-						`Allowed objects: ${[...ALLOWED_IDENTIFIERS].join(", ")}.\n` +
-						"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
-				);
+				throwFactoryError(name, modulePath, statement, sourceFile);
 			}
 		}
 	}
@@ -74,4 +72,21 @@ function collectMockFactories(statement: ts.ExpressionStatement): Array<MockFact
 	}
 
 	return factories;
+}
+
+function throwFactoryError(
+	name: string,
+	modulePath: string | undefined,
+	statement: ts.ExpressionStatement,
+	sourceFile: ts.SourceFile,
+): never {
+	const mockTarget = modulePath !== undefined ? `jest.mock(${modulePath})` : "jest.mock()";
+	const { line } = ts.getLineAndCharacterOfPosition(sourceFile, statement.getStart(sourceFile));
+	const location = `${sourceFile.fileName}:${String(line + 1)}`;
+	throw new Error(
+		`[rbxts-jest-transformer] ${location} — The module factory of \`${mockTarget}\` is not allowed to reference any out-of-scope variables.\n` +
+			`Invalid variable access: ${name}\n` +
+			`Allowed objects: ${[...ALLOWED_IDENTIFIERS].join(", ")}.\n` +
+			"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
+	);
 }

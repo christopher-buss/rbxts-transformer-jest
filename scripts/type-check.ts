@@ -75,8 +75,8 @@ function resolveViaReferences(
 		return undefined;
 	}
 
-	for (const ref of references) {
-		const refPath = resolve(directory, ref.path);
+	for (const reference of references) {
+		const refPath = resolve(directory, reference.path);
 		const refConfigPath = refPath.endsWith(".json") ? refPath : join(refPath, "tsconfig.json");
 		if (!existsSync(refConfigPath)) {
 			continue;
