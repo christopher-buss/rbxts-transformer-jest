@@ -113,6 +113,16 @@ import { foo } from "./foo";
 "
 `;
 
+exports[`partition > pure constant hoisting (REQ-009) > should hoist pure constant in block scope 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function setup() {
+    const X = 42;
+    jest.mock("./foo", () => ({ value: X }));
+    console.log("between");
+}
+"
+`;
+
 exports[`partition > should be idempotent when already hoisted 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo");

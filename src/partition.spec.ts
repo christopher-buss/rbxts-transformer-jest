@@ -812,4 +812,205 @@ beforeEach(() => {
 			expect(transformCode(input)).toMatchSnapshot();
 		});
 	});
+
+	describe("pure constant hoisting (REQ-009)", () => {
+		it("should hoist pure constant referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = 42;
+jest.mock("./foo", () => ({ value: X }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst X = 42;\njest\.mock/);
+		});
+
+		it("should hoist pure constant used as call arg", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const PATH = "./foo";
+jest.mock(PATH);
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/const PATH.*\njest\.mock\(PATH\)/);
+		});
+
+		it("should not hoist const with impure init (throws)", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+const X = getValue();
+jest.mock("./foo", () => X);
+`;
+
+			expect(() => transformCode(input)).toThrowError("X");
+		});
+
+		it("should not hoist let with pure value (throws)", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+let X = 42;
+jest.mock("./foo", () => X);
+`;
+
+			expect(() => transformCode(input)).toThrowError("X");
+		});
+
+		it("should not hoist unreferenced pure constant", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = 42;
+const Y = 99;
+jest.mock("./foo", () => ({ value: X }));
+`;
+
+			const result = transformCode(input);
+
+			// X hoisted, Y stays
+			expect(result).toMatch(/const X = 42;\njest\.mock.*\nimport.*foo.*\nconst Y = 99;/);
+		});
+
+		it("should hoist multiple pure constants", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const A = 1;
+const B = "hello";
+jest.mock("./foo", () => ({ a: A, b: B }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst A = 1;\nconst B = "hello";\njest\.mock/);
+		});
+
+		it("should hoist pure constant alongside mock-prefix var", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = 42;
+const mockFn = jest.fn();
+jest.mock("./foo", () => ({ value: X, fn: mockFn }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst mockFn.*\nconst X = 42;\njest\.mock/);
+		});
+
+		it("should hoist pure constant in block scope", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+function setup() {
+  const X = 42;
+  console.log("between");
+  jest.mock("./foo", () => ({ value: X }));
+}
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should not hoist multi-decl statement with mixed purity", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const A = 1, B = getValue();
+jest.mock("./foo", () => ({ a: A }));
+`;
+
+			const result = transformCode(input);
+
+			// A is in pureConstants so validation passes, but the statement
+			// has B which is impure — statement not extracted
+			expect(result).toMatch(/jest\.mock.*\nimport.*foo.*\nconst A = 1, B = getValue/);
+		});
+
+		it("should hoist complex pure inits (object, array, arrow fn)", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const OBJ = { a: 1, b: [2, 3] };
+const ARR = [1, 2, 3];
+const FN = () => 42;
+jest.mock("./foo", () => ({ obj: OBJ, arr: ARR, fn: FN }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(
+				/^import.*jest.*\nconst OBJ.*\nconst ARR.*\nconst FN.*\njest\.mock/,
+			);
+		});
+
+		it("should hoist pure constant in chained factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = 42;
+jest.mock("./foo", () => ({ value: X })).unmock("./bar");
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst X = 42;\njest\.mock/);
+		});
+
+		it("should treat void 0 as pure constant", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = void 0;
+jest.mock("./foo", () => ({ value: X }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst X = void 0;\njest\.mock/);
+		});
+
+		it("should treat as-cast array as pure constant", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const X = [1] as const;
+jest.mock("./foo", () => ({ value: X }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst X = \[1\] as const;\njest\.mock/);
+		});
+	});
 });

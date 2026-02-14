@@ -11,14 +11,26 @@ interface MockFactory {
 export function collectFactoryMockRefs(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
 ): Set<string> {
+	const refs = collectFactoryOuterRefs(hoisted);
+	const mockReferences = new Set<string>();
+	for (const reference of refs) {
+		if (MOCK_PREFIX.test(reference)) {
+			mockReferences.add(reference);
+		}
+	}
+
+	return mockReferences;
+}
+
+export function collectFactoryOuterRefs(
+	hoisted: ReadonlyArray<ts.ExpressionStatement>,
+): Set<string> {
 	const refs = new Set<string>();
 	for (const statement of hoisted) {
 		for (const { factory } of collectMockFactories(statement)) {
 			const local = collectLocalBindings(factory);
 			for (const name of collectOuterReferences(factory, local)) {
-				if (MOCK_PREFIX.test(name)) {
-					refs.add(name);
-				}
+				refs.add(name);
 			}
 		}
 	}
@@ -30,6 +42,7 @@ export function validateFactory(
 	statement: ts.ExpressionStatement,
 	sourceFile: ts.SourceFile,
 	importBindings: ReadonlySet<string>,
+	pureConstants: ReadonlySet<string>,
 ): void {
 	for (const { factory, modulePath } of collectMockFactories(statement)) {
 		const localBindings = collectLocalBindings(factory);
@@ -38,7 +51,8 @@ export function validateFactory(
 				!ALLOWED_IDENTIFIERS.has(name) &&
 				!MOCK_PREFIX.test(name) &&
 				!/^(?:__)?cov/.test(name) &&
-				!importBindings.has(name)
+				!importBindings.has(name) &&
+				!pureConstants.has(name)
 			) {
 				throwFactoryError(name, modulePath, statement, sourceFile);
 			}
@@ -87,6 +101,7 @@ function throwFactoryError(
 		`[rbxts-jest-transformer] ${location} — The module factory of \`${mockTarget}\` is not allowed to reference any out-of-scope variables.\n` +
 			`Invalid variable access: ${name}\n` +
 			`Allowed objects: ${[...ALLOWED_IDENTIFIERS].join(", ")}.\n` +
-			"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.",
+			"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.\n" +
+			"Variables initialized with pure constant expressions (literals, arrays, objects, arrow functions) are also permitted.",
 	);
 }

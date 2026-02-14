@@ -134,7 +134,7 @@ jest.mock("./foo", () => badVar);
 `;
 
 		expect(() => transformCode(input)).toThrowError(
-			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, Infinity, jest, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\./,
+			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, Infinity, jest, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\.\nVariables initialized with pure constant expressions \(literals, arrays, objects, arrow functions\) are also permitted\./,
 		);
 	});
 
