@@ -296,6 +296,26 @@ jest.mock("./foo");
 
 			expect(result).toMatch(/import.*foo.*\nconst mockFoo/);
 		});
+
+		it("should hoist transitive mock-prefix var dependencies", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const mockNetwork = createMockNetwork();
+const mockStartGame = mockNetwork.clientEvent("start");
+jest.mock("./foo", () => ({ start: mockStartGame }));
+`;
+
+			const result = transformCode(input);
+
+			// mockStartGame is in factory but depends on mockNetwork — both must
+			// hoist in order
+			expect(result).toMatch(
+				/^import.*jest.*\nconst mockNetwork.*\nconst mockStartGame.*\njest\.mock/,
+			);
+		});
 	});
 
 	it("should hoist mock-prefix var used as first arg to jest.mock", () => {

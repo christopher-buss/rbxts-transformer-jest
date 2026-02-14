@@ -226,6 +226,35 @@ function collectImportBindings(
 	return bindings;
 }
 
+function collectMockPrefixCandidate(
+	statement: ts.Statement,
+): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
+	if (
+		!ts.isVariableStatement(statement) ||
+		(statement.declarationList.flags & ts.NodeFlags.Const) === 0
+	) {
+		return undefined;
+	}
+
+	const allNames: Array<string> = [];
+	for (const decl of statement.declarationList.declarations) {
+		const bound = collectDeclarationNames(decl.name);
+		if (bound?.every((id) => MOCK_PREFIX.test(id)) !== true) {
+			return undefined;
+		}
+
+		allNames.push(...bound);
+	}
+
+	if (allNames.length === 0) {
+		return undefined;
+	}
+
+	const refs = collectOuterReferences(statement, new Set(allNames));
+
+	return { names: allNames, refs };
+}
+
 function collectMockTargetModules(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
@@ -278,22 +307,43 @@ function extractMockPrefixVariables(
 	rest: ReadonlyArray<ts.Statement>,
 	factoryRefs: ReadonlySet<string>,
 ): { hoistedVariables: Array<ts.VariableStatement>; remaining: Array<ts.Statement> } {
+	// Build a map of mock-prefix const statements and their declared names
+	const candidates = new Map<
+		ts.VariableStatement,
+		{ names: ReadonlyArray<string>; refs: Set<string> }
+	>();
+	for (const statement of rest) {
+		const candidate = collectMockPrefixCandidate(statement);
+		if (candidate !== undefined) {
+			candidates.set(statement as ts.VariableStatement, candidate);
+		}
+	}
+
+	// Transitively resolve: start with factoryRefs, expand with deps
+	const hoistNames = new Set(factoryRefs);
+	let changed = true;
+	while (changed) {
+		changed = false;
+		for (const [, { names, refs }] of candidates) {
+			if (!names.some((id) => hoistNames.has(id))) {
+				continue;
+			}
+
+			for (const ref of refs) {
+				if (!hoistNames.has(ref)) {
+					hoistNames.add(ref);
+					changed = true;
+				}
+			}
+		}
+	}
+
 	const hoistedVariables: Array<ts.VariableStatement> = [];
 	const remaining: Array<ts.Statement> = [];
 	for (const statement of rest) {
-		if (
-			ts.isVariableStatement(statement) &&
-			(statement.declarationList.flags & ts.NodeFlags.Const) !== 0 &&
-			statement.declarationList.declarations.every((decl) => {
-				const bound = collectDeclarationNames(decl.name);
-				return (
-					bound !== undefined &&
-					bound.every((id) => MOCK_PREFIX.test(id)) &&
-					bound.some((id) => factoryRefs.has(id))
-				);
-			})
-		) {
-			hoistedVariables.push(statement);
+		const entry = candidates.get(statement as ts.VariableStatement);
+		if (entry?.names.some((id) => hoistNames.has(id)) === true) {
+			hoistedVariables.push(statement as ts.VariableStatement);
 		} else {
 			remaining.push(statement);
 		}
