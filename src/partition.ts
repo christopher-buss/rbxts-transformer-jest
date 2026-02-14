@@ -156,6 +156,31 @@ function collectCallArgumentMockRefs(hoisted: ReadonlyArray<ts.ExpressionStateme
 	return refs;
 }
 
+function collectDeclarationNames(name: ts.BindingName): ReadonlyArray<string> | undefined {
+	if (ts.isIdentifier(name)) {
+		return [name.text];
+	}
+
+	if (ts.isArrayBindingPattern(name)) {
+		const names: Array<string> = [];
+		for (const element of name.elements) {
+			if (ts.isOmittedExpression(element)) {
+				continue;
+			}
+
+			if (!ts.isIdentifier(element.name)) {
+				return undefined;
+			}
+
+			names.push(element.name.text);
+		}
+
+		return names.length > 0 ? names : undefined;
+	}
+
+	return undefined;
+}
+
 function collectHoistedIdentifiers(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
 	hoistedVariables: ReadonlyArray<ts.VariableStatement>,
@@ -260,10 +285,11 @@ function extractMockPrefixVariables(
 			ts.isVariableStatement(statement) &&
 			(statement.declarationList.flags & ts.NodeFlags.Const) !== 0 &&
 			statement.declarationList.declarations.every((decl) => {
+				const bound = collectDeclarationNames(decl.name);
 				return (
-					ts.isIdentifier(decl.name) &&
-					MOCK_PREFIX.test(decl.name.text) &&
-					factoryRefs.has(decl.name.text)
+					bound !== undefined &&
+					bound.every((id) => MOCK_PREFIX.test(id)) &&
+					bound.some((id) => factoryRefs.has(id))
 				);
 			})
 		) {

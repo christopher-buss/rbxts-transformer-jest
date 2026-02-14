@@ -164,6 +164,81 @@ jest.mock("./a", () => ({ a: mockA, b: mockB }));
 			expect(result).toMatchSnapshot();
 		});
 
+		it("should hoist array-destructured mock-prefix var referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const [mockFoo] = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst \[mockFoo\].*\njest\.mock/);
+		});
+
+		it("should hoist array-destructured var with omitted element", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const [, mockFoo] = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nconst \[, mockFoo\].*\njest\.mock/);
+		});
+
+		it("should not hoist array-destructured var with nested destructuring", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const [[mockFoo]] = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/import.*foo.*\nconst \[\[mockFoo\]\]/);
+		});
+
+		it("should not hoist empty array destructuring", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const [] = jest.fn();
+jest.mock("./foo", () => ({}));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/import.*foo.*\nconst \[\]/);
+		});
+
+		it("should not hoist object-destructured mock-prefix var", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const { mockFoo } = jest.fn();
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/import.*foo.*\nconst \{ mockFoo \}/);
+		});
+
 		it("should not hoist non-mock-prefix var", () => {
 			expect.assertions(1);
 
