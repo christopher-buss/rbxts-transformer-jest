@@ -28,7 +28,7 @@ catalogs:
     "@rbxts/compiler-types": 3.0.0-types.0
     roblox-ts: ^3.0.0
   lint:
-    "@isentinel/eslint-config": ^4.8.1
+    "@isentinel/eslint-config": ^4.8.2
     "@vitest/eslint-plugin": ^1.6.7
     eslint: ^9.39.2
     eslint-plugin-erasable-syntax-only: ^0.4.0
