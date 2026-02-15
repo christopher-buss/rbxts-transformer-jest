@@ -6,6 +6,7 @@ export default defineConfig({
 	entry: ["src/index.ts"],
 	exports: true,
 	external: ["typescript"],
+	failOnWarn: false,
 	fixedExtension: true,
 	format: ["cjs"],
 	publint: true,
