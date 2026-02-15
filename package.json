@@ -3,6 +3,10 @@
 	"version": "0.0.1",
 	"description": "A Jest transformer for Roblox TypeScript (rbxts) projects.",
 	"keywords": ["jest", "roblox", "rbxts", "testing", "transformer"],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/christopher-buss/rbxts-jest-transformer.git"
+	},
 	"license": "MIT",
 	"author": "Christopher Buss <christopher.buss@pm.me> (https://github.com/christopher-buss)",
 	"sideEffects": false,
