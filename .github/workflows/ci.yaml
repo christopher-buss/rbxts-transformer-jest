@@ -99,6 +99,6 @@ jobs:
       - name: Integration tests
         run: nr test:integration
 
-      - if: always()
+      - if: always() && github.event_name == 'pull_request'
         name: Coverage report
         uses: davelosert/vitest-coverage-report-action@v2
