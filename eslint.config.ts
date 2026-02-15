@@ -1,4 +1,4 @@
-import isentinel, { GLOB_JSON } from "@isentinel/eslint-config";
+import isentinel, { GLOB_JSON, GLOB_TS } from "@isentinel/eslint-config";
 
 export default isentinel(
 	{
@@ -16,10 +16,17 @@ export default isentinel(
 		},
 	},
 	{
-		name: "project/root/markdown",
+		name: "project/root/markdown/json",
 		files: [`*md/${GLOB_JSON}`],
 		rules: {
 			"unicorn/filename-case": "off",
+		},
+	},
+	{
+		name: "project/root/markdown/typescript",
+		files: [`*md/${GLOB_TS}`],
+		rules: {
+			"import/first": "off",
 		},
 	},
 );
