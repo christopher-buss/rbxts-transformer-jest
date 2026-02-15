@@ -34,7 +34,7 @@
 		"pre-commit": "pnpm lint-staged"
 	},
 	"lint-staged": {
-		"*": "pnpm eslint --fix --cache --no-warn-ignored",
+		"*": "pnpm exec eslint --fix --cache --no-warn-ignored",
 		"*.ts": ["sh -c 'pnpm tsgo --noEmit'"]
 	},
 	"devDependencies": {
