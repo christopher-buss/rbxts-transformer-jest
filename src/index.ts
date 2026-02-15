@@ -1,26 +1,43 @@
 import ts from "typescript";
 
 import { collectJestNames } from "./collect-jest-names.js";
-import type { JestNames } from "./constants.js";
+import type { IdentifierPredicate, JestNames } from "./constants.js";
+import { ALLOWED_IDENTIFIERS } from "./constants.js";
 import { partitionBlock, partitionStatements } from "./partition.js";
 import { collectShadowedNames, filterShadowed } from "./shadowing.js";
 
-export default function transformer(): ts.TransformerFactory<ts.SourceFile> {
+interface TransformContext {
+	readonly factory: ts.NodeFactory;
+	readonly isAllowed: IdentifierPredicate;
+	readonly names: JestNames;
+	readonly sourceFile: ts.SourceFile;
+}
+
+export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
+	const isAllowed = createGlobalCheck(program.getTypeChecker());
+
 	return (context) => {
 		return (sourceFile) => {
 			const names = collectJestNames(sourceFile.statements);
 			const shadowed = collectShadowedNames(sourceFile.statements, names);
 			const filtered = filterShadowed(names, shadowed);
 
+			const ctx: TransformContext = {
+				factory: context.factory,
+				isAllowed,
+				names: filtered,
+				sourceFile,
+			};
+
 			function visitor(node: ts.Node): ts.Node {
 				const visited = ts.visitEachChild(node, visitor, context);
 
 				if (ts.isSourceFile(visited)) {
-					return visitSourceFile(visited, filtered, context.factory, sourceFile);
+					return visitSourceFile(visited, ctx);
 				}
 
 				if (ts.isBlock(visited)) {
-					return visitBlock(visited, filtered, context.factory, sourceFile);
+					return visitBlock(visited, ctx);
 				}
 
 				return visited;
@@ -31,37 +48,48 @@ export default function transformer(): ts.TransformerFactory<ts.SourceFile> {
 	};
 }
 
-function visitBlock(
-	node: ts.Block,
-	names: JestNames,
-	factory: ts.NodeFactory,
-	sourceFile: ts.SourceFile,
-): ts.Block {
-	const result = partitionBlock(node.statements, names, sourceFile);
+function createGlobalCheck(checker: ts.TypeChecker): IdentifierPredicate {
+	return (name: string) => {
+		if (ALLOWED_IDENTIFIERS.has(name)) {
+			return true;
+		}
+
+		const symbol = checker.resolveName(
+			name,
+			undefined,
+			ts.SymbolFlags.Value | ts.SymbolFlags.Namespace,
+			false,
+		);
+		if (symbol?.declarations === undefined || symbol.declarations.length === 0) {
+			return false;
+		}
+
+		return symbol.declarations.every((decl) => decl.getSourceFile().isDeclarationFile);
+	};
+}
+
+function visitBlock(node: ts.Block, ctx: TransformContext): ts.Block {
+	const result = partitionBlock(node.statements, ctx.names, ctx.sourceFile, ctx.isAllowed);
 	if (!result) {
 		return node;
 	}
 
-	return factory.updateBlock(node, [
+	return ctx.factory.updateBlock(node, [
 		...result.hoistedVariables,
 		...result.hoisted,
 		...result.rest,
 	]);
 }
 
-function visitSourceFile(
-	node: ts.SourceFile,
-	names: JestNames,
-	factory: ts.NodeFactory,
-	sourceFile: ts.SourceFile,
-): ts.SourceFile {
+function visitSourceFile(node: ts.SourceFile, ctx: TransformContext): ts.SourceFile {
 	const { dependencyImports, hoisted, hoistedVariables, jestImport, rest } = partitionStatements(
 		node.statements,
-		names,
-		sourceFile,
+		ctx.names,
+		ctx.sourceFile,
+		ctx.isAllowed,
 	);
 
-	return factory.updateSourceFile(node, [
+	return ctx.factory.updateSourceFile(node, [
 		...jestImport,
 		...dependencyImports,
 		...hoistedVariables,

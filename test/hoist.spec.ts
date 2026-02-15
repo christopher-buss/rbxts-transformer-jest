@@ -90,6 +90,37 @@ describe("integration: hoist-jest through roblox-ts pipeline", () => {
 		expect(() => compile(source)).toThrowError(/rbxts-jest-transformer/);
 	});
 
+	it("should allow Roblox globals in mock factory", () => {
+		expect.assertions(1);
+
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			import { foo } from "./foo";
+			jest.mock("./foo" as unknown as ModuleScript, () => ({
+				pos: new Vector3(1, 2, 3),
+				cf: new CFrame(),
+			}));
+			print(foo);
+		`;
+
+		expect(() => compile(source)).not.toThrowError();
+	});
+
+	it("should allow game global in mock factory", () => {
+		expect.assertions(1);
+
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			import { foo } from "./foo";
+			jest.mock("./foo" as unknown as ModuleScript, () => ({
+				svc: game.GetService("Workspace"),
+			}));
+			print(foo);
+		`;
+
+		expect(() => compile(source)).not.toThrowError();
+	});
+
 	it("should preserve order of multiple mocks and un-mocks", () => {
 		expect.assertions(1);
 

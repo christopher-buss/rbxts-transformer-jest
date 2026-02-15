@@ -1,7 +1,14 @@
 import ts from "typescript";
 
 import { collectLocalBindings, collectOuterReferences } from "./ast-utils.js";
-import { ALLOWED_IDENTIFIERS, HOIST_METHODS, MOCK_PREFIX } from "./constants.js";
+import type { IdentifierPredicate } from "./constants.js";
+import { HOIST_METHODS, MOCK_PREFIX } from "./constants.js";
+
+export interface FactoryValidationContext {
+	readonly importBindings: ReadonlySet<string>;
+	readonly isAllowed: IdentifierPredicate;
+	readonly pureConstants: ReadonlySet<string>;
+}
 
 interface MockFactory {
 	factory: ts.ArrowFunction | ts.FunctionExpression;
@@ -41,18 +48,17 @@ export function collectFactoryOuterRefs(
 export function validateFactory(
 	statement: ts.ExpressionStatement,
 	sourceFile: ts.SourceFile,
-	importBindings: ReadonlySet<string>,
-	pureConstants: ReadonlySet<string>,
+	context: FactoryValidationContext,
 ): void {
 	for (const { factory, modulePath } of collectMockFactories(statement)) {
 		const localBindings = collectLocalBindings(factory);
 		for (const name of collectOuterReferences(factory, localBindings)) {
 			if (
-				!ALLOWED_IDENTIFIERS.has(name) &&
+				!context.isAllowed(name) &&
 				!MOCK_PREFIX.test(name) &&
 				!/^(?:__)?cov/.test(name) &&
-				!importBindings.has(name) &&
-				!pureConstants.has(name)
+				!context.importBindings.has(name) &&
+				!context.pureConstants.has(name)
 			) {
 				throwFactoryError(name, modulePath, statement, sourceFile);
 			}
@@ -100,8 +106,7 @@ function throwFactoryError(
 	throw new Error(
 		`[rbxts-jest-transformer] ${location} — The module factory of \`${mockTarget}\` is not allowed to reference any out-of-scope variables.\n` +
 			`Invalid variable access: ${name}\n` +
-			`Allowed objects: ${[...ALLOWED_IDENTIFIERS].join(", ")}.\n` +
 			"Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.\n" +
-			"Variables initialized with pure constant expressions (literals, arrays, objects, arrow functions) are also permitted.",
+			"Global identifiers and variables initialized with pure constant expressions (literals, arrays, objects, arrow functions) are also permitted.",
 	);
 }

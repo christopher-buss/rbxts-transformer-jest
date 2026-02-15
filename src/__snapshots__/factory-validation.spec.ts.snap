@@ -92,6 +92,13 @@ import { foo } from "./foo";
 "
 `;
 
+exports[`factory-validation > should hoist factory referencing type-checker-resolved globals 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ pos: Vector3, cf: CFrame }));
+import { foo } from "./foo";
+"
+`;
+
 exports[`factory-validation > should hoist factory with function parameters 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo", () => { return (a: string) => a; });

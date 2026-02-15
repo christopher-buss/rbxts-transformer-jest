@@ -4,6 +4,8 @@ export const JEST_GLOBAL_NAME = "jest";
 export const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);
 export const MOCK_PREFIX = /^mock/i;
 
+export type IdentifierPredicate = (name: string) => boolean;
+
 export interface JestBinding {
 	readonly name: string;
 	readonly isNamespace: boolean;

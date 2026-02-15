@@ -2,7 +2,7 @@ import ts from "typescript";
 
 import { isJestModuleImport } from "./collect-jest-names.js";
 import { HOIST_METHODS, JEST_GLOBAL_NAME } from "./constants.js";
-import type { JestNames } from "./constants.js";
+import type { IdentifierPredicate, JestNames } from "./constants.js";
 import {
 	collectHoistedIdentifiers,
 	collectImportBindings,
@@ -32,13 +32,18 @@ export function partitionBlock(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
 	sourceFile: ts.SourceFile,
+	isAllowed: IdentifierPredicate,
 ): BlockPartitionResult | undefined {
 	const pureConstants = collectPureConstants(statements);
 	const hoisted: Array<ts.ExpressionStatement> = [];
 	const rest: Array<ts.Statement> = [];
 	for (const statement of statements) {
 		if (isHoistableCall(statement, names)) {
-			validateFactory(statement, sourceFile, EMPTY_SET, pureConstants);
+			validateFactory(statement, sourceFile, {
+				importBindings: EMPTY_SET,
+				isAllowed,
+				pureConstants,
+			});
 			hoisted.push(statement);
 		} else {
 			rest.push(statement);
@@ -58,6 +63,7 @@ export function partitionStatements(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
 	sourceFile: ts.SourceFile,
+	isAllowed: IdentifierPredicate,
 ): PartitionResult {
 	const pureConstants = collectPureConstants(statements);
 	const mockTargets = collectMockTargetModules(statements, names);
@@ -69,7 +75,7 @@ export function partitionStatements(
 		if (isJestModuleImport(statement)) {
 			jestImport.push(statement);
 		} else if (isHoistableCall(statement, names)) {
-			validateFactory(statement, sourceFile, importBindings, pureConstants);
+			validateFactory(statement, sourceFile, { importBindings, isAllowed, pureConstants });
 			hoisted.push(statement);
 		} else {
 			rest.push(statement);

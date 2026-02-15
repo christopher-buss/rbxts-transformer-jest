@@ -8,8 +8,8 @@ code in this repository.
 TypeScript custom transformer for roblox-ts that hoists `jest.mock()` and
 `jest.unmock()` calls above import statements at compile time. Needed because
 roblox-ts compiles imports before mock registration runs, and there's no Babel
-in the roblox-ts pipeline. The transformer is purely syntactic (AST statement
-reordering, no type information).
+in the roblox-ts pipeline. The transformer reorders AST statements and uses
+`ts.Program`/`TypeChecker` for factory validation (resolving globals).
 
 ## Commands
 
@@ -28,7 +28,7 @@ Run a single test by name: `pnpm test -- -t "should hoist jest.mock"`
 
 ## Architecture
 
-**`src/index.ts`** — Single export: `transformer()` returning
+**`src/index.ts`** — Single export: `transformer(program: ts.Program)` returning
 `ts.TransformerFactory<ts.SourceFile>`. Two-phase approach:
 
 1. Scan top-level statements to find `@rbxts/jest-globals` imports and track
@@ -37,10 +37,11 @@ Run a single test by name: `pnpm test -- -t "should hoist jest.mock"`
    `[jestGlobalsImport, ...hoistedCalls, ...everything else]`
 
 **`src/test-helpers/transform.ts`** — `transformCode(input)` helper that runs
-`ts.createSourceFile` → `ts.transform` → `ts.createPrinter` directly. No
-roblox-ts dependency — tests are pure TypeScript AST.
+`ts.createSourceFile` → `ts.transform` → `ts.createPrinter` with a mock
+`ts.Program` (stubbed `TypeChecker.resolveName`). No roblox-ts dependency —
+tests are pure TypeScript AST.
 
-**`src/hoist.spec.ts`** — Snapshot-based unit tests. Update snapshots with
+**`src/*.spec.ts`** — Snapshot-based unit tests. Update snapshots with
 `pnpm test -- -u`.
 
 ## Key Constraints
@@ -49,7 +50,7 @@ roblox-ts dependency — tests are pure TypeScript AST.
   (roblox-ts-specific)
 - Only `mock` and `unmock` are hoistable — `deepUnmock`, `enableAutomock`,
   `disableAutomock` are not implemented in `@rbxts/jest`
-- Transformer takes no `ts.Program` parameter (syntactic-only, no type info)
+- Transformer requires `ts.Program` (roblox-ts always provides it)
 - ESM-only, Node 24+, erasable syntax only
 - 100% test coverage enforced (branches, functions, lines, statements)
 
@@ -69,7 +70,8 @@ roblox-ts dependency — tests are pure TypeScript AST.
 See `PRD.md` for full spec. Key REQs: REQ-001 (basic hoisting), REQ-002
 (jest-globals first), REQ-003 (import tracking), REQ-004 (shadowing), REQ-005
 (factory validation), REQ-006 (mock-prefix vars), REQ-007 (block scope), REQ-008
-(chained calls).
+(chained calls), REQ-009 (pure constant hoisting), REQ-010 (type-checker global
+resolution).
 
 ## Core Philosophy
 

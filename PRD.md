@@ -19,8 +19,8 @@ per spec.
 
 A TypeScript custom transformer that reorders AST statements to hoist
 `jest.mock()` (and related calls) above imports at compile time, while keeping
-the `@rbxts/jest-globals` import first. Purely syntactic — no type information
-needed.
+the `@rbxts/jest-globals` import first. Uses `ts.Program`/`TypeChecker` for
+factory validation (resolving globals from `.d.ts` files).
 
 ### Success Metric
 
@@ -72,8 +72,9 @@ through the full roblox-ts VirtualProject pipeline (TS → Lua).
     - Acceptance: `const mockFoo = jest.fn(); jest.mock("./foo", () => mockFoo)`
       → both hoist above imports
 
-7. **[REQ-007]**: Block scope hoisting — hoist within function/block bodies, not
-   just top-level (matches Babel behavior which hoists in every BlockStatement)
+7. **[REQ-007]** ✅: Block scope hoisting — hoist within function/block bodies,
+   not just top-level (matches Babel behavior which hoists in every
+   BlockStatement)
 
 8. **[REQ-008]** ✅: Chained call support — `jest.unmock('./a').unmock('./b')`
    treated as single hoistable statement (recursive jest object extraction)
@@ -81,22 +82,29 @@ through the full roblox-ts VirtualProject pipeline (TS → Lua).
 
 ### Should Have
 
-9. **[REQ-009]**: Pure constant hoisting —
+9. **[REQ-009]** ✅: Pure constant hoisting —
    `const X = 42; jest.mock('./foo', () => X)` hoists `X` too
-10. **[REQ-010]**: Polyfill-aware allowlist — allow roblox-ts polyfill globals
-    (`Array`, `Map`, `Set`, `Object`, etc.) in factories since their imports
-    wouldn't be mocked and would remain above hoisted calls
+10. **[REQ-010]** ✅: Type-checker-based global resolution — use
+    `ts.Program`/`TypeChecker.resolveName()` to allow any identifier declared in
+    `.d.ts` files (Roblox globals like `Vector3`, `CFrame`, `game`, polyfill
+    globals, etc.) in mock factories. Eliminates hardcoded allowlists. Base set
+    (`jest`, `expect`, `undefined`, `NaN`, `Infinity`) kept as fallback for
+    import bindings not resolvable as globals.
 
 ### Nice to Have
 
-11. **[REQ-011]**: Configurable jest module specifier — allow overriding the
+11. **[REQ-011]**: Polyfill-aware allowlist — allow roblox-ts polyfill globals
+    (`Array`, `Map`, `Set`, `Object`, etc.) in factories since their imports
+    wouldn't be mocked and would remain above hoisted calls
+12. **[REQ-012]**: Configurable jest module specifier — allow overriding the
     `@rbxts/jest-globals` module name via plugin config for non-standard setups
 
 ---
 
 ## Technical Notes
 
-**Architecture:** Single `ts.TransformerFactory<ts.SourceFile>` export.
+**Architecture:** Single
+`(program: ts.Program) => ts.TransformerFactory<ts.SourceFile>` export.
 Two-phase approach:
 
 1. **Scan** — walk top-level statements to track `@rbxts/jest-globals` imports
@@ -122,9 +130,10 @@ SourceFile statements
 // 4. If factory arg exists, passes purity validation
 ```
 
-**Factory validation (minimal allowlist for roblox-ts):**
+**Factory validation (type-checker + base allowlist):**
 
 ```typescript
+// Base set — import bindings that are always safe (not globals)
 const ALLOWED_IDENTIFIERS = new Set([
 	"expect",
 	"Infinity",
@@ -132,15 +141,16 @@ const ALLOWED_IDENTIFIERS = new Set([
 	"NaN",
 	"undefined",
 ]);
+// + TypeChecker.resolveName() for any .d.ts-declared global
 // + /^mock/i test for variable names
 // + /^(?:__)?cov/ for istanbul coverage vars
 ```
 
-Note: Babel's allowlist includes ~40 JS/Node globals (`Array`, `Object`, `Map`,
-`Math`, `JSON`, etc.) but most don't exist as true globals in roblox-ts — they
-come from imported polyfill libraries. A polyfill-aware allowlist (REQ-010) may
-expand this in the future since polyfill imports wouldn't be mocked and would
-remain above hoisted calls.
+The transformer accepts `ts.Program` and uses `checker.resolveName()` to resolve
+identifiers. Any name whose declarations are all in `.d.ts` files is permitted
+(covers Roblox globals like `Vector3`, `CFrame`, `game`, `task`, `print`, and
+polyfill globals like `Array`, `Map`, `Set`). `ALLOWED_IDENTIFIERS` is kept as a
+fallback for names like `jest`/`expect` that are import bindings, not globals.
 
 **Scope stack for shadowing detection:**
 
@@ -154,22 +164,23 @@ Without Babel's scope/binding API, we implement a lightweight scope stack:
 
 **Error format:**
 
-Invalid factory references throw a `ReferenceError` with message matching
-Babel's format:
+Invalid factory references throw an `Error` with location and guidance:
 
 ```text
-The module factory of `jest.mock()` is not allowed to reference any
-out-of-scope variables.
+[rbxts-jest-transformer] <file>:<line> — The module factory of `jest.mock()`
+is not allowed to reference any out-of-scope variables.
 Invalid variable access: <name>
-Allowed objects: <list>.
 Note: This is a precaution to guard against uninitialized mock variables.
 If it is ensured that the mock is required lazily, variable names prefixed
 with `mock` (case insensitive) are permitted.
+Global identifiers and variables initialized with pure constant expressions
+(literals, arrays, objects, arrow functions) are also permitted.
 ```
 
 **Dependencies:**
 
-- `typescript` (peer — AST APIs)
+- `typescript` (peer — AST APIs, `TypeChecker.resolveName()`)
+- Requires `ts.Program` from roblox-ts pipeline (non-optional parameter)
 - No roblox-ts dependency for the transformer itself
 
 ---
@@ -192,11 +203,12 @@ with `mock` (case insensitive) are permitted.
 - Throw on invalid factory references
 - Chained call support (recursive jest object extraction)
 
-**Phase 3 — Block scope & edge cases:**
+**Phase 3 — Block scope & edge cases:** ✅
 
-- Add block scope hoisting (REQ-007)
-- Pure constant hoisting (REQ-009)
-- Polyfill-aware allowlist expansion (REQ-010)
+- ~~Add block scope hoisting (REQ-007)~~ ✅
+- ~~Pure constant hoisting (REQ-009)~~ ✅
+- ~~Polyfill-aware allowlist expansion (REQ-010)~~ ✅ — superseded by
+  type-checker-based global resolution
 
 ---
 
@@ -217,8 +229,8 @@ with `mock` (case insensitive) are permitted.
 2. **Scope detection** → lightweight scope stack (track bindings per
    block/function)
 3. **Block hoisting** → promoted to must-have (REQ-007), matches Babel behavior
-4. **Allowlist** → minimal for P0 (`jest`, `expect`, `undefined`, `NaN`,
-   `Infinity`), polyfill expansion as nice-to-have
+4. **Allowlist** → minimal base set (`jest`, `expect`, `undefined`, `NaN`,
+   `Infinity`) + `TypeChecker.resolveName()` for `.d.ts`-declared globals
 
 ## Open Questions
 
@@ -242,5 +254,6 @@ with `mock` (case insensitive) are permitted.
 9. Update tests + snapshots — Depends on: Tasks 3, 4, 5, 6, 7
 10. Pure constant hoisting — Depends on: Task 5
 11. Polyfill-aware allowlist — Depends on: Task 5
+12. Configurable jest module specifier — Depends on: none
 
 **Critical Path:** Task 1 → Task 2 → Task 3 → Task 7

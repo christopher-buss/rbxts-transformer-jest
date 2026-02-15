@@ -2,7 +2,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import transformer from "./index.js";
-import { transformCode } from "./test-helpers/transform.js";
+import { mockProgram, transformCode } from "./test-helpers/transform.js";
 
 describe("factory-validation", () => {
 	it("should hoist mock with no factory", () => {
@@ -24,6 +24,18 @@ jest.mock("./foo");
 import { jest } from "@rbxts/jest-globals";
 import { foo } from "./foo";
 jest.mock("./foo", () => ({ x: undefined, y: NaN, z: Infinity }));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should hoist factory referencing type-checker-resolved globals", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+jest.mock("./foo", () => ({ pos: Vector3, cf: CFrame }));
 `;
 
 		expect(transformCode(input)).toMatchSnapshot();
@@ -134,7 +146,7 @@ jest.mock("./foo", () => badVar);
 `;
 
 		expect(() => transformCode(input)).toThrowError(
-			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nAllowed objects: expect, Infinity, jest, NaN, undefined\.\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\.\nVariables initialized with pure constant expressions \(literals, arrays, objects, arrow functions\) are also permitted\./,
+			/\[rbxts-jest-transformer\] test\.ts:3 — The module factory of `jest\.mock\(\.\/foo\)` is not allowed to reference any out-of-scope variables\.\nInvalid variable access: badVar\nNote: This is a precaution to guard against uninitialized mock variables\. If it is ensured that the mock is required lazily, variable names prefixed with `mock` \(case insensitive\) are permitted\.\nGlobal identifiers and variables initialized with pure constant expressions \(literals, arrays, objects, arrow functions\) are also permitted\./,
 		);
 	});
 
@@ -340,9 +352,9 @@ jest.mock("./foo", () => badRef);
 			};
 		}
 
-		expect(() => ts.transform(sourceFile, [breakParents, transformer()])).toThrowError(
-			/test\.ts:3/,
-		);
+		expect(() =>
+			ts.transform(sourceFile, [breakParents, transformer(mockProgram)]),
+		).toThrowError(/test\.ts:3/);
 	});
 
 	it("should show jest.mock() in error when module path is non-literal", () => {

@@ -8,7 +8,7 @@ export function compile(source: string): string {
 	const project = new VirtualProject();
 	// @ts-expect-error: our TS 5.8 TransformerFactory vs roblox-ts's bundled TS
 	// 5.5
-	project.tsTransformers.push(() => transformer());
+	project.tsTransformers.push((program) => transformer(program));
 
 	loadRbxtsTypes(project);
 
