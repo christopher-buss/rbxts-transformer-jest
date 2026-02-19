@@ -22,7 +22,10 @@ const mockChecker = {
 	resolveName: (name: string) => (MOCK_GLOBALS.has(name) ? MOCK_SYMBOL : undefined),
 } as unknown as ts.TypeChecker;
 
-export const mockProgram = { getTypeChecker: () => mockChecker } as unknown as ts.Program;
+export const mockProgram = {
+	getCompilerOptions: () => ({}),
+	getTypeChecker: () => mockChecker,
+} as unknown as ts.Program;
 
 // eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
 const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });

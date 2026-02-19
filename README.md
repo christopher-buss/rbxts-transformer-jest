@@ -71,6 +71,28 @@ import { MyService } from "./my-service";
 The `@rbxts/jest-globals` import always stays first. Mock-prefix variables
 referenced in factories get hoisted alongside the mock call.
 
+## String Require Support
+
+The transformer can resolve package specifiers like `"@rbxts/services"` into
+Roblox instance paths at compile time, so you can write:
+
+```ts
+jest.mock<typeof import("@rbxts/services")>("@rbxts/services", () => {
+	return { Workspace: {} as Workspace };
+});
+```
+
+This compiles to the equivalent of:
+
+```lua
+jest.mock(game:GetService("ReplicatedStorage"):FindFirstChild("rbxts_include"):FindFirstChild("node_modules"):FindFirstChild("@rbxts"):FindFirstChild("services"), function() ... end)
+```
+
+> **Note:** You must patch `@rbxts/jest` types to accept a `string` as the first
+> argument to `jest.mock()` and `jest.unmock()`. The upstream types only accept
+> `ModuleScript` and do not account for string specifiers being transformed at
+> compile time.
+
 ## License
 
 [MIT](https://github.com/christopher-buss/rbxts-jest-transformer/blob/main/LICENSE)

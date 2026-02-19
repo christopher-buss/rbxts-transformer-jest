@@ -1,6 +1,7 @@
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import type { PackageResolver } from "./resolve-package-path.js";
 import { transformCode } from "./test-helpers/transform.js";
 import { transformMockArguments } from "./transform-mock-args.js";
 
@@ -157,5 +158,54 @@ jest.mock("../foo");
 		const result = transformMockArguments(ts.factory, [statement]);
 
 		expect(result[0]).toBe(statement);
+	});
+
+	it("should resolve package specifier when resolver is provided", () => {
+		expect.assertions(1);
+
+		const resolver: PackageResolver = {
+			resolveToRbxPath: () => [
+				"ReplicatedStorage",
+				"rbxts_include",
+				"node_modules",
+				"@rbxts",
+				"services",
+			],
+		};
+
+		const source = ts.createSourceFile(
+			"test.ts",
+			'jest.mock("@rbxts/services");',
+			ts.ScriptTarget.ESNext,
+			true,
+		);
+		const result = transformMockArguments(
+			ts.factory,
+			[...source.statements],
+			resolver,
+			"/src/test.ts",
+		);
+
+		// eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
+		const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+		const printed = printer.printFile(ts.factory.updateSourceFile(source, result));
+
+		expect(printed).toMatch(
+			/jest\.mock\(game\.GetService\("ReplicatedStorage"\)!\.FindFirstChild\("rbxts_include"\)!\.FindFirstChild\("node_modules"\)!\.FindFirstChild\("@rbxts"\)!\.FindFirstChild\("services"\) as ModuleScript\)/,
+		);
+	});
+
+	it("should leave package specifier unchanged when no resolver provided", () => {
+		expect.assertions(1);
+
+		const source = ts.createSourceFile(
+			"test.ts",
+			'jest.mock("@rbxts/services");',
+			ts.ScriptTarget.ESNext,
+			true,
+		);
+		const result = transformMockArguments(ts.factory, [...source.statements]);
+
+		expect(result[0]).toBe(source.statements[0]);
 	});
 });
