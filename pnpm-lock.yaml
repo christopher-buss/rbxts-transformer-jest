@@ -19,6 +19,13 @@ catalogs:
     pncat:
       specifier: ^0.9.1
       version: 0.9.1
+  default:
+    '@roblox-ts/path-translator':
+      specifier: ^1.1.0
+      version: 1.1.0
+    '@roblox-ts/rojo-resolver':
+      specifier: ^1.1.0
+      version: 1.1.0
   dev:
     file-entry-cache:
       specifier: ^11.1.2
@@ -139,10 +146,10 @@ importers:
         specifier: catalog:types
         version: 1.0.907
       '@roblox-ts/path-translator':
-        specifier: ^1.1.0
+        specifier: 'catalog:'
         version: 1.1.0
       '@roblox-ts/rojo-resolver':
-        specifier: ^1.1.0
+        specifier: 'catalog:'
         version: 1.1.0
       '@types/node':
         specifier: catalog:types
