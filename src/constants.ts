@@ -1,4 +1,5 @@
 export const HOIST_METHODS = new Set(["mock", "unmock"]);
+export const REQUIRE_ACTUAL_METHOD = "requireActual";
 export const JEST_MODULE = "@rbxts/jest-globals";
 export const JEST_GLOBAL_NAME = "jest";
 export const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);

@@ -209,3 +209,139 @@ jest.mock("../foo");
 		expect(result[0]).toBe(source.statements[0]);
 	});
 });
+
+describe("jest.requireActual string path transformation", () => {
+	it("should transform relative string in jest.requireActual to instance expression", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.requireActual("./foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.requireActual\(script\.Parent\.foo\)/);
+	});
+
+	it("should transform nested relative path in jest.requireActual", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.requireActual("./a/b/c");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.requireActual\(script\.Parent\.a\.b\.c\)/);
+	});
+
+	it("should transform parent path in jest.requireActual", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.requireActual("../foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.requireActual\(script\.Parent\.Parent\.foo\)/);
+	});
+
+	it("should transform jest.requireActual inside jest.mock factory", () => {
+		expect.assertions(2);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => {
+    return jest.requireActual("./foo");
+});
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.mock\(script\.Parent\.foo/);
+		expect(result).toMatch(/jest\.requireActual\(script\.Parent\.foo\)/);
+	});
+
+	it("should transform requireActual with aliased jest import", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest as j } from "@rbxts/jest-globals";
+j.requireActual("./foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/j\.requireActual\(script\.Parent\.foo\)/);
+	});
+
+	it("should transform requireActual with namespace import", () => {
+		expect.assertions(1);
+
+		const input = `
+import * as JG from "@rbxts/jest-globals";
+JG.jest.requireActual("./foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/JG\.jest\.requireActual\(script\.Parent\.foo\)/);
+	});
+
+	it("should transform requireActual as variable initializer", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+const actual = jest.requireActual("./foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/const actual = jest\.requireActual\(script\.Parent\.foo\)/);
+	});
+
+	it("should leave non-string arg in jest.requireActual unchanged", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+import { SomeService } from "@rbxts/services";
+jest.requireActual(SomeService.path);
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.requireActual\(SomeService\.path\)/);
+	});
+
+	it("should leave non-relative string in jest.requireActual unchanged", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.requireActual("@rbxts/some-package");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.requireActual\("@rbxts\/some-package"\)/);
+	});
+
+	it("should not transform requireActual on non-jest object", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+other.requireActual("./foo");
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/other\.requireActual\("\.\/foo"\)/);
+	});
+});

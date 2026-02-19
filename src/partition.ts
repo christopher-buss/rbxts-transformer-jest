@@ -28,6 +28,32 @@ export interface PartitionResult {
 	readonly rest: Array<ts.Statement>;
 }
 
+export function isJestCallee(node: ts.Expression, names: JestNames): boolean {
+	if (ts.isIdentifier(node)) {
+		return names.tracked.has(node.text);
+	}
+
+	if (
+		ts.isPropertyAccessExpression(node) &&
+		ts.isIdentifier(node.expression) &&
+		node.name.text === JEST_GLOBAL_NAME &&
+		names.namespaces.has(node.expression.text)
+	) {
+		return true;
+	}
+
+	// Chained calls: jest.mock('./a').unmock('./b')
+	if (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		HOIST_METHODS.has(node.expression.name.text)
+	) {
+		return isJestCallee(node.expression.expression, names);
+	}
+
+	return false;
+}
+
 export function partitionBlock(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
@@ -134,32 +160,6 @@ function isHoistableCall(
 		HOIST_METHODS.has(callee.name.text) &&
 		isJestCallee(callee.expression, names)
 	);
-}
-
-function isJestCallee(node: ts.Expression, names: JestNames): boolean {
-	if (ts.isIdentifier(node)) {
-		return names.tracked.has(node.text);
-	}
-
-	if (
-		ts.isPropertyAccessExpression(node) &&
-		ts.isIdentifier(node.expression) &&
-		node.name.text === JEST_GLOBAL_NAME &&
-		names.namespaces.has(node.expression.text)
-	) {
-		return true;
-	}
-
-	// Chained calls: jest.mock('./a').unmock('./b')
-	if (
-		ts.isCallExpression(node) &&
-		ts.isPropertyAccessExpression(node.expression) &&
-		HOIST_METHODS.has(node.expression.name.text)
-	) {
-		return isJestCallee(node.expression.expression, names);
-	}
-
-	return false;
 }
 
 function unwrapStringLiteral(node: ts.Expression): string | undefined {

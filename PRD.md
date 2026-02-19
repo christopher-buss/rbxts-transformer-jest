@@ -218,7 +218,9 @@ Global identifiers and variables initialized with pure constant expressions
 - `_getJestObj()` getter pattern (roblox-ts has no dynamic require)
 - ~~Integration test tier (Tier 2 with patched roblox-ts VirtualProject)~~ —
   implemented via `test/compile.ts` + `test/hoist.spec.ts`
-- `jest.requireActual` / `jest.requireMock` support
+- ~~`jest.requireActual` / `jest.requireMock` support~~ — `jest.requireActual`
+  string path transformation implemented; `jest.requireMock` remains out of
+  scope
 - JSX/TSX-specific handling
 
 ---
