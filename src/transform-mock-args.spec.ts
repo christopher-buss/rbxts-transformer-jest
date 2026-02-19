@@ -319,7 +319,7 @@ jest.requireActual(SomeService.path);
 		expect(result).toMatch(/jest\.requireActual\(SomeService\.path\)/);
 	});
 
-	it("should leave non-relative string in jest.requireActual unchanged", () => {
+	it("should leave non-relative string in jest.requireActual unchanged when no resolver", () => {
 		expect.assertions(1);
 
 		const input = `
@@ -330,6 +330,41 @@ jest.requireActual("@rbxts/some-package");
 		const result = transformCode(input);
 
 		expect(result).toMatch(/jest\.requireActual\("@rbxts\/some-package"\)/);
+	});
+
+	it("should resolve package specifier in jest.requireActual when resolver is provided", () => {
+		expect.assertions(1);
+
+		const resolver: PackageResolver = {
+			resolveToRbxPath: () => [
+				"ReplicatedStorage",
+				"rbxts_include",
+				"node_modules",
+				"@rbxts",
+				"services",
+			],
+		};
+
+		const source = ts.createSourceFile(
+			"test.ts",
+			'jest.requireActual("@rbxts/services");',
+			ts.ScriptTarget.ESNext,
+			true,
+		);
+		const [statement] = transformMockArguments(
+			ts.factory,
+			[...source.statements],
+			resolver,
+			"/src/test.ts",
+		);
+
+		// eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
+		const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+		const printed = printer.printFile(ts.factory.updateSourceFile(source, [statement!]));
+
+		expect(printed).toMatch(
+			/jest\.requireActual\(game\.GetService\("ReplicatedStorage"\)!\.FindFirstChild\("rbxts_include"\)!\.FindFirstChild\("node_modules"\)!\.FindFirstChild\("@rbxts"\)!\.FindFirstChild\("services"\) as ModuleScript\)/,
+		);
 	});
 
 	it("should not transform requireActual on non-jest object", () => {
