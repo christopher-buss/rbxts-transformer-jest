@@ -22,6 +22,7 @@ catalogs:
     bumpp: ^10.4.1
     pncat: ^0.9.1
   dev:
+    "@antfu/ni": ^28.2.0
     file-entry-cache: ^11.1.2
     madge: ^8.0.0
   integration:

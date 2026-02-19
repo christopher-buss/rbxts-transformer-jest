@@ -42,6 +42,7 @@
 		"*.ts": ["sh -c 'pnpm tsgo --noEmit'"]
 	},
 	"devDependencies": {
+		"@antfu/ni": "catalog:dev",
 		"@isentinel/eslint-config": "catalog:lint",
 		"@isentinel/tsconfig": "catalog:tsc",
 		"@rbxts/compiler-types": "catalog:integration",
