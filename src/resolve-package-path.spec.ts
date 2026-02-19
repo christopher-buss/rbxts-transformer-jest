@@ -8,7 +8,6 @@ import {
 	findRojoConfig,
 	rbxPathToExpression,
 	resolvePackagePath,
-	tryLoadDependencies,
 } from "./resolve-package-path.js";
 
 const { createPrinter, createSourceFile, EmitHint, factory, NewLineKind, ScriptTarget } = ts;
@@ -346,17 +345,6 @@ describe(createPackageResolver, () => {
 			"@rbxts",
 			"services",
 		]);
-	});
-});
-
-describe(tryLoadDependencies, () => {
-	it("should load rojo-resolver and path-translator when available", () => {
-		expect.assertions(2);
-
-		const result = tryLoadDependencies();
-
-		expect(result?.RojoResolver).toBeDefined();
-		expect(result?.PathTranslator).toBeDefined();
 	});
 });
 

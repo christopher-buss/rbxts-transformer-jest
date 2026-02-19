@@ -145,26 +145,22 @@ function chainFindFirstChild(
 	base: ts.Expression,
 	segments: ReadonlyArray<string>,
 ): ts.Expression {
-	let result = base;
-	for (const segment of segments) {
-		result = factory.createCallExpression(
+	const chained = segments.reduce<ts.Expression>((accumulator, segment) => {
+		return factory.createCallExpression(
 			factory.createPropertyAccessExpression(
-				factory.createNonNullExpression(result),
+				factory.createNonNullExpression(accumulator),
 				"FindFirstChild",
 			),
 			undefined,
 			[factory.createStringLiteral(segment)],
 		);
-	}
+	}, base);
 
 	if (segments.length > 0) {
-		result = factory.createAsExpression(
-			result,
-			factory.createTypeReferenceNode("ModuleScript"),
-		);
+		return factory.createAsExpression(chained, factory.createTypeReferenceNode("ModuleScript"));
 	}
 
-	return result;
+	return chained;
 }
 
 function defaultResolveModule(
@@ -183,8 +179,7 @@ function resolveProjectContext(
 	const { loadDependencies = tryLoadDependencies, resolveModule = defaultResolveModule } =
 		options;
 	const compilerOptions = program.getCompilerOptions();
-	const { outDir, rootDir, ...rest } = compilerOptions;
-	const { configFilePath } = rest;
+	const { configFilePath, outDir, rootDir } = compilerOptions;
 	if (typeof configFilePath !== "string" || outDir === undefined) {
 		return undefined;
 	}
