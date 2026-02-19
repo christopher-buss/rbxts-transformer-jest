@@ -4,17 +4,22 @@ import { collectJestNames } from "./collect-jest-names.js";
 import type { IdentifierPredicate, JestNames } from "./constants.js";
 import { ALLOWED_IDENTIFIERS } from "./constants.js";
 import { partitionBlock, partitionStatements } from "./partition.js";
+import type { PackageResolver } from "./resolve-package-path.js";
+import { createPackageResolver } from "./resolve-package-path.js";
 import { collectShadowedNames, filterShadowed } from "./shadowing.js";
+import { transformMockArguments } from "./transform-mock-args.js";
 
 interface TransformContext {
 	readonly factory: ts.NodeFactory;
 	readonly isAllowed: IdentifierPredicate;
 	readonly names: JestNames;
+	readonly packageResolver: PackageResolver | undefined;
 	readonly sourceFile: ts.SourceFile;
 }
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
 	const isAllowed = createGlobalCheck(program.getTypeChecker());
+	const packageResolver = createPackageResolver(program);
 
 	return (context) => {
 		return (sourceFile) => {
@@ -26,6 +31,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 				factory: context.factory,
 				isAllowed,
 				names: filtered,
+				packageResolver,
 				sourceFile,
 			};
 
@@ -76,7 +82,12 @@ function visitBlock(node: ts.Block, ctx: TransformContext): ts.Block {
 
 	return ctx.factory.updateBlock(node, [
 		...result.hoistedVariables,
-		...result.hoisted,
+		...transformMockArguments(
+			ctx.factory,
+			result.hoisted,
+			ctx.packageResolver,
+			ctx.sourceFile.fileName,
+		),
 		...result.rest,
 	]);
 }
@@ -93,7 +104,12 @@ function visitSourceFile(node: ts.SourceFile, ctx: TransformContext): ts.SourceF
 		...jestImport,
 		...dependencyImports,
 		...hoistedVariables,
-		...hoisted,
+		...transformMockArguments(
+			ctx.factory,
+			hoisted,
+			ctx.packageResolver,
+			ctx.sourceFile.fileName,
+		),
 		...rest,
 	]);
 }

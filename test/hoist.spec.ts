@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+import { tryLoadDependencies } from "../src/resolve-package-path.js";
 import { compile } from "./compile.js";
+
+describe(tryLoadDependencies, () => {
+	it("should load rojo-resolver and path-translator when available", () => {
+		expect.assertions(2);
+
+		const result = tryLoadDependencies();
+
+		expect(result?.RojoResolver).toBeDefined();
+		expect(result?.PathTranslator).toBeDefined();
+	});
+});
 
 describe("integration: hoist-jest through roblox-ts pipeline", () => {
 	it("should hoist jest.mock above require in Lua output", () => {

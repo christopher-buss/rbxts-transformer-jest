@@ -60,10 +60,8 @@ describe("consumer", () => {
 ```ts
 jest.mock("./my-service");
 
-// eslint-disable-next-line import/first -- jest.mock() is hoisted above imports
 import { describe, expect, it } from "@rbxts/jest-globals";
 
-// eslint-disable-next-line import/first -- jest.mock() is hoisted above imports
 import { MyService } from "./my-service";
 
 describe("consumer", () => {

@@ -48,6 +48,8 @@
 		"@rbxts/jest": "catalog:test",
 		"@rbxts/jest-globals": "catalog:test",
 		"@rbxts/types": "catalog:types",
+		"@roblox-ts/path-translator": "catalog:peer",
+		"@roblox-ts/rojo-resolver": "catalog:peer",
 		"@types/node": "catalog:types",
 		"@typescript/native-preview": "catalog:tsc",
 		"@vitest/coverage-v8": "catalog:test",
@@ -73,6 +75,18 @@
 		"typescript": "catalog:tsc",
 		"unplugin-unused": "catalog:build",
 		"vitest": "catalog:test"
+	},
+	"peerDependencies": {
+		"@roblox-ts/path-translator": "^1.1.0",
+		"@roblox-ts/rojo-resolver": "^1.1.0"
+	},
+	"peerDependenciesMeta": {
+		"@roblox-ts/path-translator": {
+			"optional": true
+		},
+		"@roblox-ts/rojo-resolver": {
+			"optional": true
+		}
 	},
 	"packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc",
 	"engines": {

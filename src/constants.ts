@@ -3,6 +3,13 @@ export const JEST_MODULE = "@rbxts/jest-globals";
 export const JEST_GLOBAL_NAME = "jest";
 export const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);
 export const MOCK_PREFIX = /^mock/i;
+export const STRIPPABLE_EXTENSIONS: ReadonlyArray<string> = [
+	".d.ts",
+	".tsx",
+	".ts",
+	".luau",
+	".lua",
+];
 
 export type IdentifierPredicate = (name: string) => boolean;
 

@@ -2,25 +2,25 @@
 
 exports[`factory-validation > should allow array destructuring parameters in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { const [a, b] = [1, 2]; return { a, b }; });
+jest.mock(script.Parent.foo, () => { const [a, b] = [1, 2]; return { a, b }; });
 "
 `;
 
 exports[`factory-validation > should allow array destructuring with holes in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { const [, b] = [1, 2]; return b; });
+jest.mock(script.Parent.foo, () => { const [, b] = [1, 2]; return b; });
 "
 `;
 
 exports[`factory-validation > should allow case-insensitive mock prefix 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ a: MockClass, b: MOCK_VALUE, c: mockFn }));
+jest.mock(script.Parent.foo, () => ({ a: MockClass, b: MOCK_VALUE, c: mockFn }));
 "
 `;
 
 exports[`factory-validation > should allow catch clause variable 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { try { }
+jest.mock(script.Parent.foo, () => { try { }
 catch (e) {
     return e;
 } });
@@ -29,131 +29,131 @@ catch (e) {
 
 exports[`factory-validation > should allow destructuring parameters in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { const { a, b } = { a: 1, b: 2 }; return { a, b }; });
+jest.mock(script.Parent.foo, () => { const { a, b } = { a: 1, b: 2 }; return { a, b }; });
 "
 `;
 
 exports[`factory-validation > should allow function declarations inside factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { function helper() { return 1; } return helper(); });
+jest.mock(script.Parent.foo, () => { function helper() { return 1; } return helper(); });
 "
 `;
 
 exports[`factory-validation > should allow nested object destructuring in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { const { a: { b } } = { a: { b: 1 } }; return b; });
+jest.mock(script.Parent.foo, () => { const { a: { b } } = { a: { b: 1 } }; return b; });
 "
 `;
 
 exports[`factory-validation > should allow property access on allowed objects 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ fn: jest.fn() }));
+jest.mock(script.Parent.foo, () => ({ fn: jest.fn() }));
 "
 `;
 
 exports[`factory-validation > should allow shorthand property with allowed name 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ undefined }));
+jest.mock(script.Parent.foo, () => ({ undefined }));
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing __coverage variable 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => cov_hash123);
+jest.mock(script.Parent.foo, () => cov_hash123);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing allowed identifiers 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ x: undefined, y: NaN, z: Infinity }));
+jest.mock(script.Parent.foo, () => ({ x: undefined, y: NaN, z: Infinity }));
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing coverage variable 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => __cov_x);
+jest.mock(script.Parent.foo, () => __cov_x);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing jest and expect 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => jest.fn());
+jest.mock(script.Parent.foo, () => jest.fn());
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing mock-prefixed variable 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => mockFoo);
+jest.mock(script.Parent.foo, () => mockFoo);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory referencing type-checker-resolved globals 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ pos: Vector3, cf: CFrame }));
+jest.mock(script.Parent.foo, () => ({ pos: Vector3, cf: CFrame }));
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory with function parameters 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { return (a: string) => a; });
+jest.mock(script.Parent.foo, () => { return (a: string) => a; });
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist factory with local variables 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => { const x = 1; return x; });
+jest.mock(script.Parent.foo, () => { const x = 1; return x; });
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should hoist mock with no factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo");
+jest.mock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should not validate non-function second argument 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", options);
+jest.mock(script.Parent.foo, options);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should not validate unmock factories 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.unmock("./foo");
+jest.unmock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
 
 exports[`factory-validation > should skip as-cast types in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => (undefined as SomeType));
+jest.mock(script.Parent.foo, () => (undefined as SomeType));
 "
 `;
 
 exports[`factory-validation > should skip generic type arguments on calls in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock<SomeType>("./foo", () => ({}));
+jest.mock<SomeType>(script.Parent.foo, () => ({}));
 "
 `;
 
 exports[`factory-validation > should skip property names in object literals 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ someVar: 42 }));
+jest.mock(script.Parent.foo, () => ({ someVar: 42 }));
 "
 `;
 
 exports[`factory-validation > should skip type-annotated parameters in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => (_self: unknown, action: string, entity: Entity) => { });
+jest.mock(script.Parent.foo, () => (_self: unknown, action: string, entity: Entity) => { });
 "
 `;

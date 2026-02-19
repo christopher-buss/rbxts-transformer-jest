@@ -4,4 +4,6 @@
 version: "0.2"
 language: en
 words:
+  - rojo
+  - strippable
   - tsgo

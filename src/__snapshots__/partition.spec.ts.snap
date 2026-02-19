@@ -3,7 +3,7 @@
 exports[`partition > block scope hoisting (REQ-007) > should handle chained calls within block 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 function setup() {
-    jest.mock("./a").unmock("./b");
+    jest.mock(script.Parent.a).unmock(script.Parent.b);
     console.log("before");
 }
 "
@@ -12,8 +12,8 @@ function setup() {
 exports[`partition > block scope hoisting (REQ-007) > should hoist in beforeEach callback 1`] = `
 "import { jest, beforeEach } from "@rbxts/jest-globals";
 beforeEach(() => {
-    jest.mock("./foo");
-    jest.mock("./bar");
+    jest.mock(script.Parent.foo);
+    jest.mock(script.Parent.bar);
     console.log("setup");
 });
 "
@@ -23,7 +23,7 @@ exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock in 
 "import { jest } from "@rbxts/jest-globals";
 function outer() {
     if (true) {
-        jest.mock("./foo");
+        jest.mock(script.Parent.foo);
         console.log("before");
     }
 }
@@ -33,7 +33,7 @@ function outer() {
 exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within arrow function body 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 const setup = () => {
-    jest.mock("./foo");
+    jest.mock(script.Parent.foo);
     console.log("before");
 };
 "
@@ -43,7 +43,7 @@ exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock wit
 "import { jest } from "@rbxts/jest-globals";
 try { }
 catch (e) {
-    jest.mock("./foo");
+    jest.mock(script.Parent.foo);
     console.log("before");
 }
 "
@@ -52,7 +52,7 @@ catch (e) {
 exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within function body 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 function setup() {
-    jest.mock("./foo");
+    jest.mock(script.Parent.foo);
     console.log("before");
 }
 "
@@ -61,7 +61,7 @@ function setup() {
 exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within if block body 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 if (true) {
-    jest.mock("./foo");
+    jest.mock(script.Parent.foo);
     console.log("hello");
 }
 "
@@ -70,7 +70,7 @@ if (true) {
 exports[`partition > block scope hoisting (REQ-007) > should hoist jest.mock within try block 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 try {
-    jest.mock("./foo");
+    jest.mock(script.Parent.foo);
     console.log("before");
 }
 catch (e) { }
@@ -81,7 +81,7 @@ exports[`partition > block scope hoisting (REQ-007) > should hoist mock-prefix v
 "import { jest } from "@rbxts/jest-globals";
 function setup() {
     const mockFoo = jest.fn();
-    jest.mock("./foo", () => ({ foo: mockFoo }));
+    jest.mock(script.Parent.foo, () => ({ foo: mockFoo }));
     console.log("between");
 }
 "
@@ -100,7 +100,7 @@ exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist mult
 "import { jest } from "@rbxts/jest-globals";
 const mockA = jest.fn();
 const mockB = jest.fn();
-jest.mock("./a", () => ({ a: mockA, b: mockB }));
+jest.mock(script.Parent.a, () => ({ a: mockA, b: mockB }));
 import { a } from "./a";
 "
 `;
@@ -108,7 +108,7 @@ import { a } from "./a";
 exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist single mock-prefix var referenced in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 const mockFoo = jest.fn();
-jest.mock("./foo", () => ({ foo: mockFoo }));
+jest.mock(script.Parent.foo, () => ({ foo: mockFoo }));
 import { foo } from "./foo";
 "
 `;
@@ -117,7 +117,7 @@ exports[`partition > pure constant hoisting (REQ-009) > should hoist pure consta
 "import { jest } from "@rbxts/jest-globals";
 function setup() {
     const X = 42;
-    jest.mock("./foo", () => ({ value: X }));
+    jest.mock(script.Parent.foo, () => ({ value: X }));
     console.log("between");
 }
 "
@@ -125,29 +125,29 @@ function setup() {
 
 exports[`partition > should be idempotent when already hoisted 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo");
+jest.mock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
 
 exports[`partition > should hoist both mock and unmock 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./a");
-jest.unmock("./b");
+jest.mock(script.Parent.a);
+jest.unmock(script.Parent.b);
 import { a } from "./a";
 "
 `;
 
 exports[`partition > should hoist jest.mock above imports 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo");
+jest.mock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
 
 exports[`partition > should hoist jest.unmock above imports 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.unmock("./foo");
+jest.unmock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
@@ -160,7 +160,7 @@ other.mock("./foo");
 
 exports[`partition > should keep @rbxts/jest-globals import first 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo");
+jest.mock(script.Parent.foo);
 import { foo } from "./foo";
 "
 `;
@@ -191,7 +191,7 @@ console.log(foo);
 
 exports[`partition > should preserve factory functions in jest.mock 1`] = `
 "import { jest } from "@rbxts/jest-globals";
-jest.mock("./foo", () => ({ default: 42 }));
+jest.mock(script.Parent.foo, () => ({ default: 42 }));
 import { foo } from "./foo";
 "
 `;

@@ -64,6 +64,13 @@ catalogs:
     simple-git-hooks:
       specifier: ^2.13.1
       version: 2.13.1
+  peer:
+    '@roblox-ts/path-translator':
+      specifier: ^1.1.0
+      version: 1.1.0
+    '@roblox-ts/rojo-resolver':
+      specifier: ^1.1.0
+      version: 1.1.0
   script:
     jiti:
       specifier: ^2.6.1
@@ -138,6 +145,12 @@ importers:
       '@rbxts/types':
         specifier: catalog:types
         version: 1.0.907
+      '@roblox-ts/path-translator':
+        specifier: catalog:peer
+        version: 1.1.0
+      '@roblox-ts/rojo-resolver':
+        specifier: catalog:peer
+        version: 1.1.0
       '@types/node':
         specifier: catalog:types
         version: 24.10.13
