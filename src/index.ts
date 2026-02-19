@@ -5,6 +5,7 @@ import type { IdentifierPredicate, JestNames } from "./constants.js";
 import { ALLOWED_IDENTIFIERS } from "./constants.js";
 import { partitionBlock, partitionStatements } from "./partition.js";
 import { collectShadowedNames, filterShadowed } from "./shadowing.js";
+import { transformMockArguments } from "./transform-mock-args.js";
 
 interface TransformContext {
 	readonly factory: ts.NodeFactory;
@@ -76,7 +77,7 @@ function visitBlock(node: ts.Block, ctx: TransformContext): ts.Block {
 
 	return ctx.factory.updateBlock(node, [
 		...result.hoistedVariables,
-		...result.hoisted,
+		...transformMockArguments(ctx.factory, result.hoisted),
 		...result.rest,
 	]);
 }
@@ -93,7 +94,7 @@ function visitSourceFile(node: ts.SourceFile, ctx: TransformContext): ts.SourceF
 		...jestImport,
 		...dependencyImports,
 		...hoistedVariables,
-		...hoisted,
+		...transformMockArguments(ctx.factory, hoisted),
 		...rest,
 	]);
 }
