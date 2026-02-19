@@ -18,7 +18,11 @@ const printer = createPrinter({ newLine: NewLineKind.LineFeed });
 const dummyFile = createSourceFile("test.ts", "", ScriptTarget.ESNext);
 
 function print(node: ts.Expression | undefined): string {
-	return printer.printNode(EmitHint.Expression, node!, dummyFile);
+	if (node === undefined) {
+		throw new Error("Expected expression, got undefined");
+	}
+
+	return printer.printNode(EmitHint.Expression, node, dummyFile);
 }
 
 describe(rbxPathToExpression, () => {
@@ -282,6 +286,47 @@ describe(createPackageResolver, () => {
 							"@rbxts",
 							"services",
 							"index.d.ts",
+						],
+					};
+				},
+			},
+		};
+
+		const resolver = createPackageResolver(program, {
+			loadDependencies: () => deps,
+			resolveModule: () => "/project/node_modules/@rbxts/services/index.d.ts",
+		});
+		const result = resolver?.resolveToRbxPath("@rbxts/services", "/project/src/test.ts");
+
+		expect(result).toStrictEqual([
+			"ReplicatedStorage",
+			"rbxts_include",
+			"node_modules",
+			"@rbxts",
+			"services",
+		]);
+	});
+
+	it("should strip bare index segment from rojo-resolved rbx path", () => {
+		expect.assertions(1);
+
+		const program = mockProgram({
+			configFilePath: "/project/tsconfig.json",
+			outDir: "/project/out",
+		});
+		const deps: Dependencies = {
+			PathTranslator: mockPathTranslator(),
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: () => {
+					return {
+						getRbxPathFromFilePath: () => [
+							"ReplicatedStorage",
+							"rbxts_include",
+							"node_modules",
+							"@rbxts",
+							"services",
+							"index",
 						],
 					};
 				},

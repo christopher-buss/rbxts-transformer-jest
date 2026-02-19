@@ -6,7 +6,7 @@ import type { PackageResolver } from "./resolve-package-path.js";
 import { resolvePackagePath } from "./resolve-package-path.js";
 
 interface InnerChainContext {
-	readonly args: ReadonlyArray<ts.Expression> | ts.NodeArray<ts.Expression>;
+	readonly args: ReadonlyArray<ts.Expression>;
 	readonly containingFile: string | undefined;
 	readonly resolver: PackageResolver | undefined;
 }
@@ -46,7 +46,7 @@ function transformFirstArgument(
 	node: ts.CallExpression,
 	resolver: PackageResolver | undefined,
 	containingFile: string | undefined,
-): ReadonlyArray<ts.Expression> | ts.NodeArray<ts.Expression> {
+): ReadonlyArray<ts.Expression> {
 	const firstArgument = node.arguments[0];
 	if (firstArgument === undefined) {
 		return node.arguments;

@@ -11,7 +11,11 @@ const printer = createPrinter({ newLine: NewLineKind.LineFeed });
 const dummyFile = createSourceFile("test.ts", "", ScriptTarget.ESNext);
 
 function print(node: ts.Expression | undefined): string {
-	return printer.printNode(EmitHint.Expression, node!, dummyFile);
+	if (node === undefined) {
+		throw new Error("Expected expression, got undefined");
+	}
+
+	return printer.printNode(EmitHint.Expression, node, dummyFile);
 }
 
 describe(resolveRelativeModulePath, () => {

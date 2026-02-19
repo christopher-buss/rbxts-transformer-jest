@@ -216,8 +216,7 @@ function stripIndexSegment(
 	}
 
 	const last = rbxPath.at(-1);
-	// eslint-disable-next-line ts/strict-boolean-expressions -- guarded by length check above
-	if (last?.includes(".")) {
+	if (last === "index" || last?.includes(".") === true) {
 		return rbxPath.slice(0, -1);
 	}
 

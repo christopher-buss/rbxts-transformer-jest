@@ -14,10 +14,6 @@ patchedDependencies:
   "@rbxts/jest-globals": patches/@rbxts__jest-globals.patch
   roblox-ts: patches/roblox-ts.patch
 
-catalog:
-  "@roblox-ts/path-translator": ^1.1.0
-  "@roblox-ts/rojo-resolver": ^1.1.0
-
 catalogs:
   build:
     tsdown: ^0.20.3
@@ -42,6 +38,9 @@ catalogs:
     lint-staged: ^16.2.7
     publint: ^0.3.17
     simple-git-hooks: ^2.13.1
+  peer:
+    "@roblox-ts/path-translator": ^1.1.0
+    "@roblox-ts/rojo-resolver": ^1.1.0
   script:
     jiti: ^2.6.1
   test:

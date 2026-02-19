@@ -42,8 +42,8 @@ function accessSegment(
 
 function buildBase(
 	factory: ts.NodeFactory,
-	segments: Array<string>,
-): { base: ts.Expression; rest: Array<string> } {
+	segments: ReadonlyArray<string>,
+): { base: ts.Expression; rest: ReadonlyArray<string> } {
 	let base: ts.Expression = factory.createPropertyAccessExpression(
 		factory.createIdentifier("script"),
 		"Parent",
@@ -61,10 +61,8 @@ function buildBase(
 		}
 	}
 
-	const rest = segments.slice(index);
-	if (rest.at(-1) === "index") {
-		rest.pop();
-	}
+	const tail = segments.slice(index);
+	const rest = tail.at(-1) === "index" ? tail.slice(0, -1) : tail;
 
 	return { base, rest };
 }
