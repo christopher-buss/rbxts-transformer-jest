@@ -51,7 +51,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 
 			// Pass 1: partition, hoist, validate factories, transform
 			// mock/unmock args
-			const hoisted = ts.visitNode(sourceFile, visitor) as ts.SourceFile;
+			const hoisted = ts.visitNode(sourceFile, visitor, ts.isSourceFile);
 
 			/**
 			 * Pass 2: transform jest.requireActual args (runs after
@@ -69,7 +69,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 				return visited;
 			}
 
-			return ts.visitNode(hoisted, requireActualVisitor) as ts.SourceFile;
+			return ts.visitNode(hoisted, requireActualVisitor, ts.isSourceFile);
 		};
 	};
 }

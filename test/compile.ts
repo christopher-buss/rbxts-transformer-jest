@@ -4,7 +4,7 @@ import { VirtualProject } from "roblox-ts";
 
 import transformer from "../src/index.js";
 
-export function compile(source: string): string {
+export function compile(source: string, extraFiles?: Readonly<Record<string, string>>): string {
 	const project = new VirtualProject();
 	// @ts-expect-error: our TS 5.8 TransformerFactory vs roblox-ts's bundled TS
 	// 5.5
@@ -14,6 +14,12 @@ export function compile(source: string): string {
 
 	for (const name of ["foo", "a", "b"]) {
 		project.vfs.writeFile(`/src/${name}.ts`, `export const ${name} = 1;\n`);
+	}
+
+	if (extraFiles) {
+		for (const [filePath, content] of Object.entries(extraFiles)) {
+			project.vfs.writeFile(filePath, content);
+		}
 	}
 
 	// Appended ;export {} forces roblox-ts to treat the source as an ESM module

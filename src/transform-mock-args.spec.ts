@@ -351,7 +351,7 @@ jest.requireActual("@rbxts/some-package");
 			ts.ScriptTarget.ESNext,
 			true,
 		);
-		const [statement] = transformMockArguments(
+		const result = transformMockArguments(
 			ts.factory,
 			[...source.statements],
 			resolver,
@@ -360,7 +360,7 @@ jest.requireActual("@rbxts/some-package");
 
 		// eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
 		const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-		const printed = printer.printFile(ts.factory.updateSourceFile(source, [statement!]));
+		const printed = printer.printFile(ts.factory.updateSourceFile(source, result));
 
 		expect(printed).toMatch(
 			/jest\.requireActual\(game\.GetService\("ReplicatedStorage"\)!\.FindFirstChild\("rbxts_include"\)!\.FindFirstChild\("node_modules"\)!\.FindFirstChild\("@rbxts"\)!\.FindFirstChild\("services"\) as ModuleScript\)/,

@@ -133,6 +133,34 @@ describe("integration: hoist-jest through roblox-ts pipeline", () => {
 		expect(() => compile(source)).not.toThrowError();
 	});
 
+	it("should transform jest.requireActual inside jest.mock factory", () => {
+		expect.assertions(1);
+
+		const jestStringPatch = `
+			import "@rbxts/jest-globals";
+			declare module "@rbxts/jest-globals" {
+				namespace jest {
+					function mock<T = unknown>(moduleScript: string, factory?: () => T): typeof jest;
+					function requireActual<TModule extends {} = unknown>(moduleScript: string): TModule;
+				}
+			}
+		`;
+
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			jest.mock("@rbxts/jest", () => {
+				const actual = jest.requireActual("@rbxts/jest");
+				return actual;
+			});
+		`;
+
+		const luau = compile(source, {
+			"/src/jest-string-patch.d.ts": jestStringPatch,
+		});
+
+		expect(luau).toMatchSnapshot();
+	});
+
 	it("should preserve order of multiple mocks and un-mocks", () => {
 		expect.assertions(1);
 
