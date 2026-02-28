@@ -5,7 +5,7 @@
 	"keywords": ["jest", "roblox", "rbxts", "testing", "transformer"],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/christopher-buss/rbxts-jest-transformer.git"
+		"url": "https://github.com/christopher-buss/rbxts-transformer-jest.git"
 	},
 	"license": "MIT",
 	"author": "Christopher Buss <christopher.buss@pm.me> (https://github.com/christopher-buss)",
