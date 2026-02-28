@@ -55,3 +55,15 @@ print(a, b)
 return nil
 "
 `;
+
+exports[`integration: hoist-jest through roblox-ts pipeline > should transform jest.requireActual inside jest.mock factory 1`] = `
+"-- Compiled with roblox-ts v3.0.0
+local TS = _G[script]
+local jest = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "jest-globals", "src").jest
+jest.mock("@rbxts/jest", function()
+	local actual = jest.requireActual("@rbxts/jest")
+	return actual
+end)
+return nil
+"
+`;

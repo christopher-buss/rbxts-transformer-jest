@@ -11,6 +11,34 @@ interface InnerChainContext {
 	readonly resolver: PackageResolver | undefined;
 }
 
+export function transformFirstArgument(
+	factory: ts.NodeFactory,
+	node: ts.CallExpression,
+	resolver: PackageResolver | undefined,
+	containingFile: string | undefined,
+): ReadonlyArray<ts.Expression> {
+	const firstArgument = node.arguments[0];
+	if (firstArgument === undefined) {
+		return node.arguments;
+	}
+
+	if (!ts.isStringLiteral(firstArgument)) {
+		return node.arguments;
+	}
+
+	const resolved =
+		resolveRelativeModulePath(factory, firstArgument.text) ??
+		(resolver !== undefined && containingFile !== undefined
+			? resolvePackagePath(factory, firstArgument.text, containingFile, resolver)
+			: undefined);
+
+	if (resolved === undefined) {
+		return node.arguments;
+	}
+
+	return [resolved, ...node.arguments.slice(1)];
+}
+
 export function transformMockArguments(
 	factory: ts.NodeFactory,
 	statements: Array<ts.Statement>,
@@ -39,34 +67,6 @@ function transformCallChain(
 	}
 
 	return node;
-}
-
-function transformFirstArgument(
-	factory: ts.NodeFactory,
-	node: ts.CallExpression,
-	resolver: PackageResolver | undefined,
-	containingFile: string | undefined,
-): ReadonlyArray<ts.Expression> {
-	const firstArgument = node.arguments[0];
-	if (firstArgument === undefined) {
-		return node.arguments;
-	}
-
-	if (!ts.isStringLiteral(firstArgument)) {
-		return node.arguments;
-	}
-
-	const resolved =
-		resolveRelativeModulePath(factory, firstArgument.text) ??
-		(resolver !== undefined && containingFile !== undefined
-			? resolvePackagePath(factory, firstArgument.text, containingFile, resolver)
-			: undefined);
-
-	if (resolved === undefined) {
-		return node.arguments;
-	}
-
-	return [resolved, ...node.arguments.slice(1)];
 }
 
 function transformInnerChain(
