@@ -7,6 +7,7 @@ import type { HoistableDeclaration } from "./extract-variables.js";
 export function collectHoistedIdentifiers(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
 	hoistedVariables: ReadonlyArray<HoistableDeclaration>,
+	jsxFactoryIdentifier: string | undefined,
 ): Set<string> {
 	const ids = new Set<string>();
 	const empty = new Set<string>();
@@ -29,6 +30,10 @@ export function collectHoistedIdentifiers(
 				ids.add(name);
 			}
 		}
+	}
+
+	if (jsxFactoryIdentifier !== undefined && factoriesContainJsx(hoisted)) {
+		ids.add(jsxFactoryIdentifier);
 	}
 
 	return ids;
@@ -124,6 +129,38 @@ function addImportClauseBindings(
 			out.add(element.name.text);
 		}
 	}
+}
+
+function containsJsx(node: ts.Node): boolean {
+	if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)) {
+		return true;
+	}
+
+	return ts.forEachChild(node, containsJsx) ?? false;
+}
+
+function factoriesContainJsx(hoisted: ReadonlyArray<ts.ExpressionStatement>): boolean {
+	for (const statement of hoisted) {
+		let node = statement.expression;
+		while (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression) &&
+			HOIST_METHODS.has(node.expression.name.text)
+		) {
+			for (const argument of node.arguments) {
+				if (
+					(ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) &&
+					containsJsx(argument)
+				) {
+					return true;
+				}
+			}
+
+			node = node.expression.expression;
+		}
+	}
+
+	return false;
 }
 
 function importBindsAny(

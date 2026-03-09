@@ -411,7 +411,7 @@ import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo", () => () => <SomeComponent />);
 `;
 
-		expect(() => transformCode(input, "test.tsx")).toThrowError("SomeComponent");
+		expect(() => transformCode(input, "test.tsx")).toThrowErrorMatchingSnapshot();
 	});
 
 	it("should skip generic type arguments on calls in factory", () => {

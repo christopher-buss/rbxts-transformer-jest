@@ -30,6 +30,13 @@ export const mockProgram = {
 // eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
 const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
 
+export function createMockProgram(compilerOptions: ts.CompilerOptions = {}): ts.Program {
+	return {
+		getCompilerOptions: () => compilerOptions,
+		getTypeChecker: () => mockChecker,
+	} as unknown as ts.Program;
+}
+
 export function transformCode(input: string, fileName = "test.ts"): string {
 	const sourceFile = ts.createSourceFile(fileName, input, ts.ScriptTarget.ESNext, true);
 	const factory = transformer(mockProgram);
