@@ -370,6 +370,50 @@ jest.mock(someVar, () => badRef);
 		);
 	});
 
+	it("should allow intrinsic JSX elements in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => () => <textlabel Text="hello" />);
+`;
+
+		expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+	});
+
+	it("should allow nested intrinsic JSX elements in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => () => <frame><textlabel Text="hello" /></frame>);
+`;
+
+		expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+	});
+
+	it("should allow mock-prefixed JSX component in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => () => <MockComponent />);
+`;
+
+		expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+	});
+
+	it("should throw on out-of-scope JSX component in factory", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => () => <SomeComponent />);
+`;
+
+		expect(() => transformCode(input, "test.tsx")).toThrowError("SomeComponent");
+	});
+
 	it("should skip generic type arguments on calls in factory", () => {
 		expect.assertions(1);
 

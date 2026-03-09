@@ -39,6 +39,24 @@ jest.mock(script.Parent.foo, () => { function helper() { return 1; } return help
 "
 `;
 
+exports[`factory-validation > should allow intrinsic JSX elements in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <textlabel Text="hello"/>);
+"
+`;
+
+exports[`factory-validation > should allow mock-prefixed JSX component in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <MockComponent />);
+"
+`;
+
+exports[`factory-validation > should allow nested intrinsic JSX elements in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <frame><textlabel Text="hello"/></frame>);
+"
+`;
+
 exports[`factory-validation > should allow nested object destructuring in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock(script.Parent.foo, () => { const { a: { b } } = { a: { b: 1 } }; return b; });

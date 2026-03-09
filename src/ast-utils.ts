@@ -63,9 +63,23 @@ export function getBindingName(node: ts.Node): string | undefined {
 }
 
 export function isReferencePosition(node: ts.Identifier): boolean {
-	const { parent } = node;
+	const { parent, text } = node;
 	if (ts.isBindingElement(parent)) {
 		return parent.name !== node && parent.propertyName !== node;
+	}
+
+	if (ts.isJsxAttribute(parent) && parent.name === node) {
+		return false;
+	}
+
+	if (
+		(ts.isJsxSelfClosingElement(parent) ||
+			ts.isJsxOpeningElement(parent) ||
+			ts.isJsxClosingElement(parent)) &&
+		parent.tagName === node &&
+		/^[a-z]/.test(text)
+	) {
+		return false;
 	}
 
 	const isDeclarationName =
