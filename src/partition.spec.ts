@@ -637,6 +637,77 @@ jest.mock("./foo", () => ({}));
 		});
 	});
 
+	describe("mock-prefix class declaration hoisting", () => {
+		it("should hoist mock-prefix class referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+class mockFoo {
+    bar() { return 42; }
+}
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/^import.*jest.*\nclass mockFoo[\s\S]*?\}\njest\.mock/);
+		});
+
+		it("should not hoist mock-prefix class not referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+class mockBar {
+    bar() { return 42; }
+}
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(/import.*foo.*\nclass mockBar/);
+		});
+
+		it("should not hoist class without mock prefix", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+class MyHelper {
+    bar() { return 42; }
+}
+jest.mock("./foo", () => ({ foo: MyHelper }));
+`;
+
+			expect(() => transformCode(input)).toThrowError("MyHelper");
+		});
+
+		it("should hoist mock-prefix class with transitive mock-prefix var dependency", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const mockError = jest.fn();
+class mockLog {
+    Error() { mockError(); }
+}
+jest.mock("./foo", () => ({ log: mockLog }));
+`;
+
+			const result = transformCode(input);
+
+			expect(result).toMatch(
+				/^import.*jest.*\nconst mockError.*\nclass mockLog[\s\S]*?\}\njest\.mock/,
+			);
+		});
+	});
+
 	describe("block scope hoisting (REQ-007)", () => {
 		it("should hoist jest.mock within if block body", () => {
 			expect.assertions(1);

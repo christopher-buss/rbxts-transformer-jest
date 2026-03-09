@@ -4,18 +4,18 @@ import { collectOuterReferences } from "./ast-utils.js";
 import { HOIST_METHODS, MOCK_PREFIX } from "./constants.js";
 import { collectFactoryMockRefs, collectFactoryOuterRefs } from "./factory-validation.js";
 
+export type HoistableDeclaration = ts.ClassDeclaration | ts.VariableStatement;
+
 export function extractAllVariables(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
 	rest: ReadonlyArray<ts.Statement>,
 	pureConstants: ReadonlySet<string>,
-): { hoistedVariables: Array<ts.VariableStatement>; remaining: Array<ts.Statement> } {
+): { hoistedVariables: Array<HoistableDeclaration>; remaining: Array<ts.Statement> } {
 	const factoryRefs = collectFactoryMockRefs(hoisted);
 	const argumentRefs = collectCallArgumentMockRefs(hoisted);
 	const allMockRefs = new Set([...argumentRefs, ...factoryRefs]);
-	const { hoistedVariables: mockVariables, remaining: afterMock } = extractMockPrefixVariables(
-		rest,
-		allMockRefs,
-	);
+	const { hoistedDeclarations: mockDeclarations, remaining: afterMock } =
+		extractMockPrefixDeclarations(rest, allMockRefs);
 
 	const allOuterRefs = collectFactoryOuterRefs(hoisted);
 	const allArgumentRefs = collectCallArgumentIdentifiers(hoisted);
@@ -28,7 +28,7 @@ export function extractAllVariables(
 		pureConstants,
 	);
 
-	return { hoistedVariables: [...mockVariables, ...pureVariables], remaining };
+	return { hoistedVariables: [...mockDeclarations, ...pureVariables], remaining };
 }
 
 function collectCallArgumentIdentifiers(
@@ -102,6 +102,23 @@ function collectDeclarationNames(name: ts.BindingName): ReadonlyArray<string> | 
 	return undefined;
 }
 
+function collectMockClassCandidate(
+	statement: ts.Statement,
+): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
+	if (
+		!ts.isClassDeclaration(statement) ||
+		!statement.name ||
+		!MOCK_PREFIX.test(statement.name.text)
+	) {
+		return undefined;
+	}
+
+	const name = statement.name.text;
+	const refs = collectOuterReferences(statement, new Set([name]));
+
+	return { names: [name], refs };
+}
+
 function collectMockPrefixCandidate(
 	statement: ts.Statement,
 ): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
@@ -127,35 +144,36 @@ function collectMockPrefixCandidate(
 	return { names: allNames, refs };
 }
 
-function extractMockPrefixVariables(
+function extractMockPrefixDeclarations(
 	rest: ReadonlyArray<ts.Statement>,
 	factoryRefs: ReadonlySet<string>,
-): { hoistedVariables: Array<ts.VariableStatement>; remaining: Array<ts.Statement> } {
+): { hoistedDeclarations: Array<HoistableDeclaration>; remaining: Array<ts.Statement> } {
 	const candidates = new Map<
-		ts.VariableStatement,
+		HoistableDeclaration,
 		{ names: ReadonlyArray<string>; refs: Set<string> }
 	>();
 	for (const statement of rest) {
-		const candidate = collectMockPrefixCandidate(statement);
+		const candidate =
+			collectMockPrefixCandidate(statement) ?? collectMockClassCandidate(statement);
 		if (candidate !== undefined) {
-			candidates.set(statement as ts.VariableStatement, candidate);
+			candidates.set(statement as HoistableDeclaration, candidate);
 		}
 	}
 
 	const hoistNames = resolveTransitiveDeps(candidates, factoryRefs);
 
-	const hoistedVariables: Array<ts.VariableStatement> = [];
+	const hoistedDeclarations: Array<HoistableDeclaration> = [];
 	const remaining: Array<ts.Statement> = [];
 	for (const statement of rest) {
-		const entry = candidates.get(statement as ts.VariableStatement);
+		const entry = candidates.get(statement as HoistableDeclaration);
 		if (entry?.names.some((id) => hoistNames.has(id)) === true) {
-			hoistedVariables.push(statement as ts.VariableStatement);
+			hoistedDeclarations.push(statement as HoistableDeclaration);
 		} else {
 			remaining.push(statement);
 		}
 	}
 
-	return { hoistedVariables, remaining };
+	return { hoistedDeclarations, remaining };
 }
 
 function extractPureConstantVariables(
@@ -203,7 +221,7 @@ function isPureConstantStatement(
 
 function resolveTransitiveDeps(
 	candidates: ReadonlyMap<
-		ts.VariableStatement,
+		HoistableDeclaration,
 		{ names: ReadonlyArray<string>; refs: Set<string> }
 	>,
 	factoryRefs: ReadonlySet<string>,
