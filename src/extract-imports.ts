@@ -2,37 +2,24 @@ import ts from "typescript";
 
 import { collectLocalBindings, collectOuterReferences } from "./ast-utils.js";
 import { HOIST_METHODS, JEST_MODULE } from "./constants.js";
-import type { HoistableDeclaration } from "./extract-variables.js";
 
 export function collectHoistedIdentifiers(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
-	hoistedVariables: ReadonlyArray<HoistableDeclaration>,
+	hoistedVariables: ReadonlyArray<ts.Statement>,
 	jsxFactoryIdentifier: string | undefined,
 ): Set<string> {
 	const ids = new Set<string>();
-	const empty = new Set<string>();
 
 	for (const statement of hoisted) {
-		addCallArgumentReferences(statement, empty, ids);
+		addCallArgumentReferences(statement, new Set<string>(), ids);
 	}
 
-	// Walk the full declaration — collectOuterReferences skips
-	// declaration names (decl.name) and type nodes automatically
-	for (const statement of hoistedVariables) {
-		if (ts.isVariableStatement(statement)) {
-			for (const declaration of statement.declarationList.declarations) {
-				for (const name of collectOuterReferences(declaration, empty)) {
-					ids.add(name);
-				}
-			}
-		} else {
-			for (const name of collectOuterReferences(statement, empty)) {
-				ids.add(name);
-			}
-		}
-	}
+	addDeclarationReferences(hoistedVariables, ids);
 
-	if (jsxFactoryIdentifier !== undefined && factoriesContainJsx(hoisted)) {
+	if (
+		jsxFactoryIdentifier !== undefined &&
+		(factoriesContainJsx(hoisted) || statementsContainJsx(hoistedVariables))
+	) {
 		ids.add(jsxFactoryIdentifier);
 	}
 
@@ -102,6 +89,23 @@ function addCallArgumentReferences(
 		}
 
 		node = node.expression.expression;
+	}
+}
+
+function addDeclarationReferences(
+	hoistedVariables: ReadonlyArray<ts.Statement>,
+	out: Set<string>,
+): void {
+	const empty = new Set<string>();
+	for (const statement of hoistedVariables) {
+		const nodes: ReadonlyArray<ts.Node> = ts.isVariableStatement(statement)
+			? statement.declarationList.declarations
+			: [statement];
+		for (const node of nodes) {
+			for (const name of collectOuterReferences(node, empty)) {
+				out.add(name);
+			}
+		}
 	}
 }
 
@@ -186,4 +190,8 @@ function importBindsAny(
 	}
 
 	return namedBindings.elements.some((element) => identifiers.has(element.name.text));
+}
+
+function statementsContainJsx(statements: ReadonlyArray<ts.Statement>): boolean {
+	return statements.some((statement) => containsJsx(statement));
 }

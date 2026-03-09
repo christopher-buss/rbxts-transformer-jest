@@ -634,12 +634,36 @@ jest.mock("./foo", () => ({
 }));
 `;
 
-			const result = transformCode(input, "test.tsx");
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+		});
 
-			// React import hoisted above jest.mock, foo stays below
-			expect(result).toMatch(
-				/^import.*jest-globals.*\nimport React.*\njest\.mock[\s\S]*\nimport.*foo/,
-			);
+		it("should hoist React import when hoisted variable contains JSX", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+import { foo } from "./foo";
+const mockComponent = () => <textlabel Text="mock" />;
+jest.mock("./foo", () => ({ default: mockComponent }));
+`;
+
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+		});
+
+		it("should hoist React import when factory contains JSX fragment", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+import { foo } from "./foo";
+jest.mock("./foo", () => ({
+  default: () => <></>,
+}));
+`;
+
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
 		});
 
 		it("should hoist custom jsxFactory import when factory contains JSX", () => {
@@ -662,10 +686,7 @@ jest.mock("./foo", () => ({
 			const output = printer.printFile(result.transformed[0]!);
 			result.dispose();
 
-			// h import hoisted above jest.mock, foo stays below
-			expect(output).toMatch(
-				/^import.*jest-globals.*\nimport h.*\njest\.mock[\s\S]*\nimport.*foo/,
-			);
+			expect(output).toMatchSnapshot();
 		});
 
 		it("should not hoist imports when mock args have no import refs", () => {
