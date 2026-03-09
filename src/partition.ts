@@ -8,6 +8,7 @@ import {
 	collectImportBindings,
 	extractDependencyImports,
 } from "./extract-imports.js";
+import type { HoistableDeclaration } from "./extract-variables.js";
 import { extractAllVariables } from "./extract-variables.js";
 import { validateFactory } from "./factory-validation.js";
 import { collectPureConstants } from "./purity.js";
@@ -16,14 +17,14 @@ const EMPTY_SET: ReadonlySet<string> = new Set<string>();
 
 export interface BlockPartitionResult {
 	readonly hoisted: Array<ts.Statement>;
-	readonly hoistedVariables: Array<ts.VariableStatement>;
+	readonly hoistedVariables: Array<HoistableDeclaration>;
 	readonly rest: Array<ts.Statement>;
 }
 
 export interface PartitionResult {
 	readonly dependencyImports: Array<ts.Statement>;
 	readonly hoisted: Array<ts.Statement>;
-	readonly hoistedVariables: Array<ts.VariableStatement>;
+	readonly hoistedVariables: Array<HoistableDeclaration>;
 	readonly jestImport: Array<ts.Statement>;
 	readonly rest: Array<ts.Statement>;
 }

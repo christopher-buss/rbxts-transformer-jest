@@ -2,10 +2,11 @@ import ts from "typescript";
 
 import { collectLocalBindings, collectOuterReferences } from "./ast-utils.js";
 import { HOIST_METHODS, JEST_MODULE } from "./constants.js";
+import type { HoistableDeclaration } from "./extract-variables.js";
 
 export function collectHoistedIdentifiers(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
-	hoistedVariables: ReadonlyArray<ts.VariableStatement>,
+	hoistedVariables: ReadonlyArray<HoistableDeclaration>,
 ): Set<string> {
 	const ids = new Set<string>();
 	const empty = new Set<string>();
@@ -17,8 +18,14 @@ export function collectHoistedIdentifiers(
 	// Walk the full declaration — collectOuterReferences skips
 	// declaration names (decl.name) and type nodes automatically
 	for (const statement of hoistedVariables) {
-		for (const declaration of statement.declarationList.declarations) {
-			for (const name of collectOuterReferences(declaration, empty)) {
+		if (ts.isVariableStatement(statement)) {
+			for (const declaration of statement.declarationList.declarations) {
+				for (const name of collectOuterReferences(declaration, empty)) {
+					ids.add(name);
+				}
+			}
+		} else {
+			for (const name of collectOuterReferences(statement, empty)) {
 				ids.add(name);
 			}
 		}

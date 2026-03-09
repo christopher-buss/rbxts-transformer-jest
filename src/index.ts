@@ -23,54 +23,33 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 
 	return (context) => {
 		return (sourceFile) => {
-			const names = collectJestNames(sourceFile.statements);
-			const shadowed = collectShadowedNames(sourceFile.statements, names);
-			const filtered = filterShadowed(names, shadowed);
-
-			const ctx: TransformContext = {
-				factory: context.factory,
-				isAllowed,
-				names: filtered,
-				packageResolver,
+			const ctx = buildContext(context, sourceFile, isAllowed, packageResolver);
+			const hoisted = ts.visitNode(
 				sourceFile,
-			};
+				createHoistVisitor(context, ctx),
+				ts.isSourceFile,
+			);
 
-			function visitor(node: ts.Node): ts.Node {
-				const visited = ts.visitEachChild(node, visitor, context);
-
-				if (ts.isSourceFile(visited)) {
-					return visitSourceFile(visited, ctx);
-				}
-
-				if (ts.isBlock(visited)) {
-					return visitBlock(visited, ctx);
-				}
-
-				return visited;
-			}
-
-			// Pass 1: partition, hoist, validate factories, transform
-			// mock/unmock args
-			const hoisted = ts.visitNode(sourceFile, visitor, ts.isSourceFile);
-
-			/**
-			 * Pass 2: transform jest.requireActual args (runs after
-			 * validation).
-			 *
-			 * @param node
-			 */
-			function requireActualVisitor(node: ts.Node): ts.Node {
-				const visited = ts.visitEachChild(node, requireActualVisitor, context);
-
-				if (ts.isCallExpression(visited) && isRequireActualCall(visited, ctx.names)) {
-					return visitRequireActual(visited, ctx);
-				}
-
-				return visited;
-			}
-
-			return ts.visitNode(hoisted, requireActualVisitor, ts.isSourceFile);
+			return ts.visitNode(hoisted, createRequireActualVisitor(context, ctx), ts.isSourceFile);
 		};
+	};
+}
+
+function buildContext(
+	context: ts.TransformationContext,
+	sourceFile: ts.SourceFile,
+	isAllowed: IdentifierPredicate,
+	packageResolver: PackageResolver | undefined,
+): TransformContext {
+	const names = collectJestNames(sourceFile.statements);
+	const shadowed = collectShadowedNames(sourceFile.statements, names);
+
+	return {
+		factory: context.factory,
+		isAllowed,
+		names: filterShadowed(names, shadowed),
+		packageResolver,
+		sourceFile,
 	};
 }
 
@@ -92,6 +71,44 @@ function createGlobalCheck(checker: ts.TypeChecker): IdentifierPredicate {
 
 		return symbol.declarations.every((decl) => decl.getSourceFile().isDeclarationFile);
 	};
+}
+
+function createHoistVisitor(
+	context: ts.TransformationContext,
+	ctx: TransformContext,
+): (node: ts.Node) => ts.Node {
+	function visitor(node: ts.Node): ts.Node {
+		const visited = ts.visitEachChild(node, visitor, context);
+
+		if (ts.isSourceFile(visited)) {
+			return visitSourceFile(visited, ctx);
+		}
+
+		if (ts.isBlock(visited)) {
+			return visitBlock(visited, ctx);
+		}
+
+		return visited;
+	}
+
+	return visitor;
+}
+
+function createRequireActualVisitor(
+	context: ts.TransformationContext,
+	ctx: TransformContext,
+): (node: ts.Node) => ts.Node {
+	function visitor(node: ts.Node): ts.Node {
+		const visited = ts.visitEachChild(node, visitor, context);
+
+		if (ts.isCallExpression(visited) && isRequireActualCall(visited, ctx.names)) {
+			return visitRequireActual(visited, ctx);
+		}
+
+		return visited;
+	}
+
+	return visitor;
 }
 
 function isRequireActualCall(node: ts.CallExpression, names: JestNames): boolean {
