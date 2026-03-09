@@ -161,6 +161,32 @@ describe("integration: hoist-jest through roblox-ts pipeline", () => {
 		expect(luau).toMatchSnapshot();
 	});
 
+	it("should hoist React import above jest.mock when factory contains JSX", () => {
+		expect.assertions(3);
+
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			import React from "@rbxts/react";
+			import { foo } from "./foo";
+			jest.mock("./foo" as unknown as ModuleScript, () => ({
+				default: () => <textlabel />,
+			}));
+			print(foo);
+		`;
+
+		const luau = compile(source);
+		const lines = luau.split("\n");
+		const reactImportIndex = lines.findIndex((line) => line.includes("react"));
+		const jestMockIndex = lines.findIndex((line) => line.includes("jest.mock"));
+		const fooImportIndex = lines.findIndex(
+			(line) => line.includes("foo") && line.includes("TS.import"),
+		);
+
+		expect(reactImportIndex).toBeGreaterThan(-1);
+		expect(reactImportIndex).toBeLessThan(jestMockIndex);
+		expect(fooImportIndex).toBeGreaterThan(jestMockIndex);
+	});
+
 	it("should preserve order of multiple mocks and un-mocks", () => {
 		expect.assertions(1);
 

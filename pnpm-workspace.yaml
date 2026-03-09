@@ -27,6 +27,7 @@ catalogs:
     madge: ^8.0.0
   integration:
     "@rbxts/compiler-types": 3.0.0-types.0
+    "@rbxts/react": 17.3.7-ts.1
     roblox-ts: ^3.0.0
   lint:
     "@isentinel/eslint-config": ^4.8.2
