@@ -9,21 +9,28 @@ import { createPackageResolver } from "./resolve-package-path.js";
 import { collectShadowedNames, filterShadowed } from "./shadowing.js";
 import { transformFirstArgument, transformMockArguments } from "./transform-mock-args.js";
 
-interface TransformContext {
+interface TransformContext extends TransformerOptions {
 	readonly factory: ts.NodeFactory;
-	readonly isAllowed: IdentifierPredicate;
 	readonly names: JestNames;
-	readonly packageResolver: PackageResolver | undefined;
 	readonly sourceFile: ts.SourceFile;
 }
 
+interface TransformerOptions {
+	readonly isAllowed: IdentifierPredicate;
+	readonly jsxFactoryIdentifier: string | undefined;
+	readonly packageResolver: PackageResolver | undefined;
+}
+
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
-	const isAllowed = createGlobalCheck(program.getTypeChecker());
-	const packageResolver = createPackageResolver(program);
+	const options: TransformerOptions = {
+		isAllowed: createGlobalCheck(program.getTypeChecker()),
+		jsxFactoryIdentifier: getJsxFactoryIdentifier(program.getCompilerOptions()),
+		packageResolver: createPackageResolver(program),
+	};
 
 	return (context) => {
 		return (sourceFile) => {
-			const ctx = buildContext(context, sourceFile, isAllowed, packageResolver);
+			const ctx = buildContext(context, sourceFile, options);
 			const hoisted = ts.visitNode(
 				sourceFile,
 				createHoistVisitor(context, ctx),
@@ -38,17 +45,15 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 function buildContext(
 	context: ts.TransformationContext,
 	sourceFile: ts.SourceFile,
-	isAllowed: IdentifierPredicate,
-	packageResolver: PackageResolver | undefined,
+	options: TransformerOptions,
 ): TransformContext {
 	const names = collectJestNames(sourceFile.statements);
 	const shadowed = collectShadowedNames(sourceFile.statements, names);
 
 	return {
+		...options,
 		factory: context.factory,
-		isAllowed,
 		names: filterShadowed(names, shadowed),
-		packageResolver,
 		sourceFile,
 	};
 }
@@ -111,6 +116,12 @@ function createRequireActualVisitor(
 	return visitor;
 }
 
+function getJsxFactoryIdentifier(options: ts.CompilerOptions): string | undefined {
+	const factory = options.jsxFactory ?? "React.createElement";
+	const dot = factory.indexOf(".");
+	return dot === -1 ? factory : factory.slice(0, dot);
+}
+
 function isRequireActualCall(node: ts.CallExpression, names: JestNames): boolean {
 	return (
 		ts.isPropertyAccessExpression(node.expression) &&
@@ -156,7 +167,7 @@ function visitSourceFile(node: ts.SourceFile, ctx: TransformContext): ts.SourceF
 		node.statements,
 		ctx.names,
 		ctx.sourceFile,
-		ctx.isAllowed,
+		{ isAllowed: ctx.isAllowed, jsxFactoryIdentifier: ctx.jsxFactoryIdentifier },
 	);
 
 	return ctx.factory.updateSourceFile(node, [

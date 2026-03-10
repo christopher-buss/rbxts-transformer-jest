@@ -33,6 +33,9 @@ catalogs:
     '@rbxts/compiler-types':
       specifier: 3.0.0-types.0
       version: 3.0.0-types.0
+    '@rbxts/react':
+      specifier: 17.3.7-ts.1
+      version: 17.3.7-ts.1
     roblox-ts:
       specifier: ^3.0.0
       version: 3.0.0
@@ -148,6 +151,9 @@ importers:
       '@rbxts/jest-globals':
         specifier: catalog:test
         version: 3.13.3-ts.1(patch_hash=b0b766997536504f041b9ed201607d7bef3afae6ba3d6d070cde971ec2bcfd04)
+      '@rbxts/react':
+        specifier: catalog:integration
+        version: 17.3.7-ts.1
       '@rbxts/types':
         specifier: catalog:types
         version: 1.0.907
@@ -1255,6 +1261,9 @@ packages:
   '@rbxts-js/react-is@17.3.7-ts.1':
     resolution: {integrity: sha512-jTGn3lJWCrFhQ2kMogQXb430+JMSZhsD0VgM1HDYDGwmQpNQhnal5/ERa4Fa0B40HrZFvUbDvZsDX2tB6mqO+w==}
 
+  '@rbxts-js/react@17.3.7-ts.1':
+    resolution: {integrity: sha512-nRHYoBzk9DSbOvk281jmN5EM3TlmKv2jOzLgSIGtmNMuwZKi9yEjjxdluS1wHmjSvus1YiPHhBUwrKnbu01Obg==}
+
   '@rbxts-js/roblox-lua-promise@3.5.0-ts.2':
     resolution: {integrity: sha512-H8fxKVJkRnM60yTZ/riO4X43GZD/MViFm+ftCzzAALkAhE4vSaBDNv9E7IUjZZoWi21bG6vZ8mGIiYfavaljvw==}
 
@@ -1299,6 +1308,9 @@ packages:
 
   '@rbxts/pretty-format@3.13.3-ts.1':
     resolution: {integrity: sha512-uTSxVdfQv/cD+kvttLzw/LfyNC35mxAsJrSqom+F94etDYlz7ZRvG75izSPfzG2oVRSrhv6roaeWPeTqkpcIug==}
+
+  '@rbxts/react@17.3.7-ts.1':
+    resolution: {integrity: sha512-/jqZ2TvyLSAPwC30h95loUmy4XN2PwPhv6fBARJKtZfyozFx2RuxC9FiQSjpEZ2uOOPzr60It0MBUf94D+tsMg==}
 
   '@rbxts/types@1.0.907':
     resolution: {integrity: sha512-DZv8I1dDp5EY/o6Kt+e/dPUEVfxrTzudgr9vpC5Qn5Yhab/hfd4+vEh9i55ORko/yPhaAXDKEPKlpmuUYnAj3g==}
@@ -6145,6 +6157,12 @@ snapshots:
       '@rbxts-js/safe-flags': 17.3.7-ts.1
       '@rbxts-js/shared': 17.3.7-ts.1
 
+  '@rbxts-js/react@17.3.7-ts.1':
+    dependencies:
+      '@rbxts-js/luau-polyfill': 1.2.3-ts.1
+      '@rbxts-js/react-globals': 17.3.7-ts.1
+      '@rbxts-js/shared': 17.3.7-ts.1
+
   '@rbxts-js/roblox-lua-promise@3.5.0-ts.2': {}
 
   '@rbxts-js/roblox-shared@3.13.3-ts.3':
@@ -6212,6 +6230,10 @@ snapshots:
   '@rbxts/pretty-format@3.13.3-ts.1':
     dependencies:
       '@rbxts-js/pretty-format': 3.13.3-ts.3
+
+  '@rbxts/react@17.3.7-ts.1':
+    dependencies:
+      '@rbxts-js/react': 17.3.7-ts.1
 
   '@rbxts/types@1.0.907': {}
 

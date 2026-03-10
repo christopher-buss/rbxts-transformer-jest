@@ -48,6 +48,7 @@
 		"@rbxts/compiler-types": "catalog:integration",
 		"@rbxts/jest": "catalog:test",
 		"@rbxts/jest-globals": "catalog:test",
+		"@rbxts/react": "catalog:integration",
 		"@rbxts/types": "catalog:types",
 		"@roblox-ts/path-translator": "catalog:peer",
 		"@roblox-ts/rojo-resolver": "catalog:peer",

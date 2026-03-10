@@ -96,6 +96,45 @@ function setup() {
 "
 `;
 
+exports[`partition > dependency import hoisting > should hoist React import when factory contains JSX 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+jest.mock(script.Parent.foo, () => ({
+    default: () => <textlabel Text="mock"/>,
+}));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > dependency import hoisting > should hoist React import when factory contains JSX fragment 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+jest.mock(script.Parent.foo, () => ({
+    default: () => <></>,
+}));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > dependency import hoisting > should hoist React import when hoisted variable contains JSX 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+const mockComponent = () => <textlabel Text="mock"/>;
+jest.mock(script.Parent.foo, () => ({ default: mockComponent }));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > dependency import hoisting > should hoist custom jsxFactory import when factory contains JSX 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+import h from "my-jsx-lib";
+jest.mock(script.Parent.foo, () => ({
+    default: () => <textlabel Text="mock"/>,
+}));
+import { foo } from "./foo";
+"
+`;
+
 exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist multiple mock-prefix vars 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 const mockA = jest.fn();

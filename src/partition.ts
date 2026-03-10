@@ -29,6 +29,11 @@ export interface PartitionResult {
 	readonly rest: Array<ts.Statement>;
 }
 
+interface PartitionOptions {
+	readonly isAllowed: IdentifierPredicate;
+	readonly jsxFactoryIdentifier: string | undefined;
+}
+
 export function isJestCallee(node: ts.Expression, names: JestNames): boolean {
 	if (ts.isIdentifier(node)) {
 		return names.tracked.has(node.text);
@@ -90,7 +95,7 @@ export function partitionStatements(
 	statements: ts.NodeArray<ts.Statement>,
 	names: JestNames,
 	sourceFile: ts.SourceFile,
-	isAllowed: IdentifierPredicate,
+	{ isAllowed, jsxFactoryIdentifier }: PartitionOptions,
 ): PartitionResult {
 	const pureConstants = collectPureConstants(statements);
 	const mockTargets = collectMockTargetModules(statements, names);
@@ -110,7 +115,7 @@ export function partitionStatements(
 	}
 
 	const { hoistedVariables, remaining } = extractAllVariables(hoisted, rest, pureConstants);
-	const depIds = collectHoistedIdentifiers(hoisted, hoistedVariables);
+	const depIds = collectHoistedIdentifiers(hoisted, hoistedVariables, jsxFactoryIdentifier);
 	const { dependencyImports, remaining: finalRest } = extractDependencyImports(remaining, depIds);
 
 	return { dependencyImports, hoisted, hoistedVariables, jestImport, rest: finalRest };

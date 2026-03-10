@@ -39,6 +39,24 @@ jest.mock(script.Parent.foo, () => { function helper() { return 1; } return help
 "
 `;
 
+exports[`factory-validation > should allow intrinsic JSX elements in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <textlabel Text="hello"/>);
+"
+`;
+
+exports[`factory-validation > should allow mock-prefixed JSX component in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <MockComponent />);
+"
+`;
+
+exports[`factory-validation > should allow nested intrinsic JSX elements in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => () => <frame><textlabel Text="hello"/></frame>);
+"
+`;
+
 exports[`factory-validation > should allow nested object destructuring in factory 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock(script.Parent.foo, () => { const { a: { b } } = { a: { b: 1 } }; return b; });
@@ -156,4 +174,11 @@ exports[`factory-validation > should skip type-annotated parameters in factory 1
 "import { jest } from "@rbxts/jest-globals";
 jest.mock(script.Parent.foo, () => (_self: unknown, action: string, entity: Entity) => { });
 "
+`;
+
+exports[`factory-validation > should throw on out-of-scope JSX component in factory 1`] = `
+[Error: [rbxts-jest-transformer] test.tsx:3 — The module factory of \`jest.mock(./foo)\` is not allowed to reference any out-of-scope variables.
+Invalid variable access: SomeComponent
+Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with \`mock\` (case insensitive) are permitted.
+Global identifiers and variables initialized with pure constant expressions (literals, arrays, objects, arrow functions) are also permitted.]
 `;

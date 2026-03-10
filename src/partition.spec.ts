@@ -1,6 +1,8 @@
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-import { transformCode } from "./test-helpers/transform.js";
+import transformer from "./index.js";
+import { createMockProgram, transformCode } from "./test-helpers/transform.js";
 
 describe("partition", () => {
 	it("should hoist jest.mock above imports", () => {
@@ -618,6 +620,73 @@ jest.mock("./foo" as unknown as ModuleScript, () => foo);
 `;
 
 			expect(() => transformCode(input)).toThrowError("foo");
+		});
+
+		it("should hoist React import when factory contains JSX", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+import { foo } from "./foo";
+jest.mock("./foo", () => ({
+  default: () => <textlabel Text="mock" />,
+}));
+`;
+
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+		});
+
+		it("should hoist React import when hoisted variable contains JSX", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+import { foo } from "./foo";
+const mockComponent = () => <textlabel Text="mock" />;
+jest.mock("./foo", () => ({ default: mockComponent }));
+`;
+
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+		});
+
+		it("should hoist React import when factory contains JSX fragment", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import React from "@rbxts/react";
+import { foo } from "./foo";
+jest.mock("./foo", () => ({
+  default: () => <></>,
+}));
+`;
+
+			expect(transformCode(input, "test.tsx")).toMatchSnapshot();
+		});
+
+		it("should hoist custom jsxFactory import when factory contains JSX", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import h from "my-jsx-lib";
+import { foo } from "./foo";
+jest.mock("./foo", () => ({
+  default: () => <textlabel Text="mock" />,
+}));
+`;
+
+			const sourceFile = ts.createSourceFile("test.tsx", input, ts.ScriptTarget.ESNext, true);
+			const program = createMockProgram({ jsxFactory: "h" });
+			const result = ts.transform(sourceFile, [transformer(program)]);
+			// eslint-disable-next-line unicorn/no-keyword-prefix -- TS API property name
+			const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+			const output = printer.printFile(result.transformed[0]!);
+			result.dispose();
+
+			expect(output).toMatchSnapshot();
 		});
 
 		it("should not hoist imports when mock args have no import refs", () => {

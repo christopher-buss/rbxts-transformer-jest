@@ -2,33 +2,25 @@ import ts from "typescript";
 
 import { collectLocalBindings, collectOuterReferences } from "./ast-utils.js";
 import { HOIST_METHODS, JEST_MODULE } from "./constants.js";
-import type { HoistableDeclaration } from "./extract-variables.js";
 
 export function collectHoistedIdentifiers(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
-	hoistedVariables: ReadonlyArray<HoistableDeclaration>,
+	hoistedVariables: ReadonlyArray<ts.Statement>,
+	jsxFactoryIdentifier: string | undefined,
 ): Set<string> {
 	const ids = new Set<string>();
-	const empty = new Set<string>();
 
 	for (const statement of hoisted) {
-		addCallArgumentReferences(statement, empty, ids);
+		addCallArgumentReferences(statement, new Set<string>(), ids);
 	}
 
-	// Walk the full declaration — collectOuterReferences skips
-	// declaration names (decl.name) and type nodes automatically
-	for (const statement of hoistedVariables) {
-		if (ts.isVariableStatement(statement)) {
-			for (const declaration of statement.declarationList.declarations) {
-				for (const name of collectOuterReferences(declaration, empty)) {
-					ids.add(name);
-				}
-			}
-		} else {
-			for (const name of collectOuterReferences(statement, empty)) {
-				ids.add(name);
-			}
-		}
+	addDeclarationReferences(hoistedVariables, ids);
+
+	if (
+		jsxFactoryIdentifier !== undefined &&
+		(factoriesContainJsx(hoisted) || statementsContainJsx(hoistedVariables))
+	) {
+		ids.add(jsxFactoryIdentifier);
 	}
 
 	return ids;
@@ -100,6 +92,23 @@ function addCallArgumentReferences(
 	}
 }
 
+function addDeclarationReferences(
+	hoistedVariables: ReadonlyArray<ts.Statement>,
+	out: Set<string>,
+): void {
+	const empty = new Set<string>();
+	for (const statement of hoistedVariables) {
+		const nodes: ReadonlyArray<ts.Node> = ts.isVariableStatement(statement)
+			? statement.declarationList.declarations
+			: [statement];
+		for (const node of nodes) {
+			for (const name of collectOuterReferences(node, empty)) {
+				out.add(name);
+			}
+		}
+	}
+}
+
 function addImportClauseBindings(
 	importClause: ts.ImportClause | undefined,
 	out: Set<string>,
@@ -126,6 +135,38 @@ function addImportClauseBindings(
 	}
 }
 
+function containsJsx(node: ts.Node): boolean {
+	if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)) {
+		return true;
+	}
+
+	return ts.forEachChild(node, containsJsx) ?? false;
+}
+
+function factoriesContainJsx(hoisted: ReadonlyArray<ts.ExpressionStatement>): boolean {
+	for (const statement of hoisted) {
+		let node = statement.expression;
+		while (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression) &&
+			HOIST_METHODS.has(node.expression.name.text)
+		) {
+			for (const argument of node.arguments) {
+				if (
+					(ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) &&
+					containsJsx(argument)
+				) {
+					return true;
+				}
+			}
+
+			node = node.expression.expression;
+		}
+	}
+
+	return false;
+}
+
 function importBindsAny(
 	declaration: ts.ImportDeclaration,
 	identifiers: ReadonlySet<string>,
@@ -149,4 +190,8 @@ function importBindsAny(
 	}
 
 	return namedBindings.elements.some((element) => identifiers.has(element.name.text));
+}
+
+function statementsContainJsx(statements: ReadonlyArray<ts.Statement>): boolean {
+	return statements.some((statement) => containsJsx(statement));
 }
