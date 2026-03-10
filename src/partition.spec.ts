@@ -777,6 +777,74 @@ jest.mock("./foo", () => ({ log: mockLog }));
 		});
 	});
 
+	describe("mock-prefix function declaration hoisting", () => {
+		it("should hoist mock-prefix function referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+function mockFoo() { return 42; }
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should not hoist mock-prefix function not referenced in factory", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+function mockBar() { return 42; }
+jest.mock("./foo", () => ({ foo: mockFoo }));
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should not hoist function without mock prefix", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+function MyHelper() { return 42; }
+jest.mock("./foo", () => ({ foo: MyHelper }));
+`;
+
+			expect(() => transformCode(input)).toThrowError("MyHelper");
+		});
+
+		it("should hoist mock-prefix function with transitive mock-prefix var dependency", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+const mockError = jest.fn();
+function mockLog() { mockError(); }
+jest.mock("./foo", () => ({ log: mockLog }));
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+
+		it("should hoist mock-prefix function with case-insensitive prefix (MockFoo)", () => {
+			expect.assertions(1);
+
+			const input = `
+import { jest } from "@rbxts/jest-globals";
+import { foo } from "./foo";
+function MockFoo() { return 42; }
+jest.mock("./foo", () => ({ default: MockFoo }));
+`;
+
+			expect(transformCode(input)).toMatchSnapshot();
+		});
+	});
+
 	describe("block scope hoisting (REQ-007)", () => {
 		it("should hoist jest.mock within if block body", () => {
 			expect.assertions(1);
