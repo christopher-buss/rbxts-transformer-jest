@@ -135,6 +135,39 @@ import { foo } from "./foo";
 "
 `;
 
+exports[`partition > mock-prefix function declaration hoisting > should hoist mock-prefix function referenced in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function mockFoo() { return 42; }
+jest.mock(script.Parent.foo, () => ({ foo: mockFoo }));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > mock-prefix function declaration hoisting > should hoist mock-prefix function with case-insensitive prefix (MockFoo) 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+function MockFoo() { return 42; }
+jest.mock(script.Parent.foo, () => ({ default: MockFoo }));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > mock-prefix function declaration hoisting > should hoist mock-prefix function with transitive mock-prefix var dependency 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+const mockError = jest.fn();
+function mockLog() { mockError(); }
+jest.mock(script.Parent.foo, () => ({ log: mockLog }));
+import { foo } from "./foo";
+"
+`;
+
+exports[`partition > mock-prefix function declaration hoisting > should not hoist mock-prefix function not referenced in factory 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => ({ foo: mockFoo }));
+import { foo } from "./foo";
+function mockBar() { return 42; }
+"
+`;
+
 exports[`partition > mock-prefix variable hoisting (REQ-006) > should hoist multiple mock-prefix vars 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 const mockA = jest.fn();

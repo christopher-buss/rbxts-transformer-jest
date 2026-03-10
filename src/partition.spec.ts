@@ -788,9 +788,7 @@ function mockFoo() { return 42; }
 jest.mock("./foo", () => ({ foo: mockFoo }));
 `;
 
-			const result = transformCode(input);
-
-			expect(result).toMatch(/^import.*jest.*\nfunction mockFoo[\s\S]*?\}\njest\.mock/);
+			expect(transformCode(input)).toMatchSnapshot();
 		});
 
 		it("should not hoist mock-prefix function not referenced in factory", () => {
@@ -803,9 +801,7 @@ function mockBar() { return 42; }
 jest.mock("./foo", () => ({ foo: mockFoo }));
 `;
 
-			const result = transformCode(input);
-
-			expect(result).toMatch(/import.*foo.*\nfunction mockBar/);
+			expect(transformCode(input)).toMatchSnapshot();
 		});
 
 		it("should not hoist function without mock prefix", () => {
@@ -832,11 +828,7 @@ function mockLog() { mockError(); }
 jest.mock("./foo", () => ({ log: mockLog }));
 `;
 
-			const result = transformCode(input);
-
-			expect(result).toMatch(
-				/^import.*jest.*\nconst mockError.*\nfunction mockLog[\s\S]*?\}\njest\.mock/,
-			);
+			expect(transformCode(input)).toMatchSnapshot();
 		});
 
 		it("should hoist mock-prefix function with case-insensitive prefix (MockFoo)", () => {
@@ -849,9 +841,7 @@ function MockFoo() { return 42; }
 jest.mock("./foo", () => ({ default: MockFoo }));
 `;
 
-			const result = transformCode(input);
-
-			expect(result).toMatch(/^import.*jest.*\nfunction MockFoo[\s\S]*?\}\njest\.mock/);
+			expect(transformCode(input)).toMatchSnapshot();
 		});
 	});
 

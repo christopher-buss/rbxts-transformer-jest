@@ -127,6 +127,7 @@ function collectMockFunctionCandidate(
 ): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
 	if (
 		!ts.isFunctionDeclaration(statement) ||
+		!statement.body ||
 		!statement.name ||
 		!MOCK_PREFIX.test(statement.name.text)
 	) {
