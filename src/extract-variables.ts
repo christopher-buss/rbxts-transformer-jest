@@ -4,7 +4,10 @@ import { collectOuterReferences } from "./ast-utils.js";
 import { HOIST_METHODS, MOCK_PREFIX } from "./constants.js";
 import { collectFactoryMockRefs, collectFactoryOuterRefs } from "./factory-validation.js";
 
-export type HoistableDeclaration = ts.ClassDeclaration | ts.VariableStatement;
+export type HoistableDeclaration =
+	| ts.ClassDeclaration
+	| ts.FunctionDeclaration
+	| ts.VariableStatement;
 
 export function extractAllVariables(
 	hoisted: ReadonlyArray<ts.ExpressionStatement>,
@@ -119,6 +122,23 @@ function collectMockClassCandidate(
 	return { names: [name], refs };
 }
 
+function collectMockFunctionCandidate(
+	statement: ts.Statement,
+): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
+	if (
+		!ts.isFunctionDeclaration(statement) ||
+		!statement.name ||
+		!MOCK_PREFIX.test(statement.name.text)
+	) {
+		return undefined;
+	}
+
+	const name = statement.name.text;
+	const refs = collectOuterReferences(statement, new Set([name]));
+
+	return { names: [name], refs };
+}
+
 function collectMockPrefixCandidate(
 	statement: ts.Statement,
 ): undefined | { names: ReadonlyArray<string>; refs: Set<string> } {
@@ -154,7 +174,9 @@ function extractMockPrefixDeclarations(
 	>();
 	for (const statement of rest) {
 		const candidate =
-			collectMockPrefixCandidate(statement) ?? collectMockClassCandidate(statement);
+			collectMockPrefixCandidate(statement) ??
+			collectMockClassCandidate(statement) ??
+			collectMockFunctionCandidate(statement);
 		if (candidate !== undefined) {
 			candidates.set(statement as HoistableDeclaration, candidate);
 		}
