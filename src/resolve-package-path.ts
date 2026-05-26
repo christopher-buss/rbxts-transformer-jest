@@ -1,6 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+
+import type { TsConfigReader } from "./tsconfig-reader.js";
+import { defaultReadTsConfig, resolveRojoFromTsConfig } from "./tsconfig-reader.js";
 
 export interface CreateResolverOptions {
 	loadDependencies?: () => Dependencies | undefined;
@@ -55,8 +57,6 @@ interface RojoResolverStatic {
 	findRojoConfigFilePath(projectPath: string): { path: string | undefined };
 	fromPath(rojoConfigFilePath: string): RojoResolverLike;
 }
-
-type TsConfigReader = (configPath: string) => unknown;
 
 export function createPackageResolver(
 	program: ts.Program,
@@ -182,17 +182,6 @@ function chainFindFirstChild(
 	return chained;
 }
 
-function defaultReadTsConfig(configPath: string): unknown {
-	let text: string;
-	try {
-		text = fs.readFileSync(configPath, "utf8");
-	} catch {
-		return undefined;
-	}
-
-	return ts.parseConfigFileTextToJson(configPath, text).config;
-}
-
 function defaultResolveModule(
 	specifier: string,
 	containingFile: string,
@@ -200,19 +189,6 @@ function defaultResolveModule(
 ): string | undefined {
 	return ts.resolveModuleName(specifier, containingFile, options, ts.sys).resolvedModule
 		?.resolvedFileName;
-}
-
-function resolveRojoFromTsConfig(
-	configFilePath: string,
-	readTsConfig: TsConfigReader,
-): string | undefined {
-	const config = readTsConfig(configFilePath) as undefined | { rbxts?: { rojo?: unknown } };
-	const rojo = config?.rbxts?.rojo;
-	if (typeof rojo !== "string") {
-		return undefined;
-	}
-
-	return path.resolve(path.dirname(configFilePath), rojo);
 }
 
 const NODE_MODULES_RE = /[\\/]node_modules[\\/]/;
@@ -241,19 +217,18 @@ function buildOwnerTranslator(
 	PathTranslatorCtor: PathTranslatorConstructor,
 ): OwnerTranslator | undefined {
 	const { fileNames, options } = commandLine;
-	if (typeof options.outDir !== "string") {
+	const { configFilePath, outDir, rootDir } = options;
+	if (typeof outDir !== "string") {
 		return undefined;
 	}
 
-	const { configFilePath } = options as { configFilePath?: unknown };
 	const referenceRoot =
-		options.rootDir ??
-		(typeof configFilePath === "string" ? path.dirname(configFilePath) : undefined);
+		rootDir ?? (typeof configFilePath === "string" ? path.dirname(configFilePath) : undefined);
 	if (referenceRoot === undefined) {
 		return undefined;
 	}
 
-	const pathTranslator = new PathTranslatorCtor(referenceRoot, options.outDir, undefined, false);
+	const pathTranslator = new PathTranslatorCtor(referenceRoot, outDir, undefined, false);
 	return { fileNames: new Set(fileNames), pathTranslator };
 }
 
