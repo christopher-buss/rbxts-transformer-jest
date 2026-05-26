@@ -1,4 +1,5 @@
 /* eslint-disable sonar/no-duplicate-string -- test assertion values */
+import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
@@ -137,8 +138,24 @@ describe(resolvePackagePath, () => {
 });
 
 describe(createPackageResolver, () => {
-	function mockProgram(options: Record<string, unknown>): ts.Program {
-		return { getCompilerOptions: () => options } as unknown as ts.Program;
+	function mockProgram(
+		options: Record<string, unknown>,
+		references?: ReadonlyArray<MockProjectReference>,
+	): ts.Program {
+		return {
+			getCompilerOptions: () => options,
+			getResolvedProjectReferences: () => references,
+		} as unknown as ts.Program;
+	}
+
+	interface MockProjectReference {
+		readonly commandLine: {
+			readonly fileNames: ReadonlyArray<string>;
+			readonly options: {
+				readonly outDir: string;
+				readonly rootDir?: string;
+			};
+		};
 	}
 
 	function mockPathTranslator(transform = (filePath: string) => filePath) {
@@ -304,6 +321,190 @@ describe(createPackageResolver, () => {
 			"@rbxts",
 			"services",
 		]);
+	});
+
+	it("should use rbxts.rojo from tsconfig when present", () => {
+		expect.assertions(1);
+
+		const program = mockProgram({
+			configFilePath: "/project/tsconfig.spec.json",
+			outDir: "/project/out-test",
+		});
+		let fromPathArgument: string | undefined;
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator() {
+				return { getOutputPath: (filePath: string) => filePath };
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: (rojoPath: string) => {
+					fromPathArgument = rojoPath;
+					return { getRbxPathFromFilePath: () => {} };
+				},
+			},
+		};
+
+		createPackageResolver(program, {
+			loadDependencies: () => deps,
+			readTsConfig: (configPath: string) => {
+				return configPath === "/project/tsconfig.spec.json"
+					? { rbxts: { rojo: "./spec.project.json" } }
+					: undefined;
+			},
+		});
+
+		expect(fromPathArgument).toBe(path.resolve("/project", "./spec.project.json"));
+	});
+
+	it("should fall back to findRojoConfigFilePath when rbxts.rojo is absent", () => {
+		expect.assertions(1);
+
+		const program = mockProgram({
+			configFilePath: "/project/tsconfig.json",
+			outDir: "/project/out",
+		});
+		let fromPathArgument: string | undefined;
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator() {
+				return { getOutputPath: (filePath: string) => filePath };
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: (rojoPath: string) => {
+					fromPathArgument = rojoPath;
+					return { getRbxPathFromFilePath: () => {} };
+				},
+			},
+		};
+
+		createPackageResolver(program, {
+			loadDependencies: () => deps,
+			readTsConfig: () => {},
+		});
+
+		expect(fromPathArgument).toBe("/project/default.project.json");
+	});
+
+	it("should use referenced project's translator when it owns the file", () => {
+		expect.assertions(2);
+
+		const libraryRootDirectory = "/project/src";
+		const libraryOutDirectory = "/project/out";
+		const sourceFile = "/project/src/server/add-item-stack.ts";
+
+		const program = mockProgram(
+			{
+				configFilePath: "/project/tsconfig.spec.json",
+				outDir: "/project/out-test",
+			},
+			[
+				{
+					commandLine: {
+						fileNames: [sourceFile],
+						options: { outDir: libraryOutDirectory, rootDir: libraryRootDirectory },
+					},
+				},
+			],
+		);
+
+		const constructorCalls: Array<{
+			outDirectory: string;
+			rootDirectory: string;
+		}> = [];
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator(rootDirectory: string, outDirectory: string) {
+				constructorCalls.push({ outDirectory, rootDirectory });
+				return {
+					getOutputPath: (filePath: string) => {
+						return path
+							.join(outDirectory, path.relative(rootDirectory, filePath))
+							.replace(/\\/g, "/");
+					},
+				};
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: () => {
+					return {
+						getRbxPathFromFilePath: (filePath: string) => {
+							return filePath === "/project/out/server/add-item-stack.ts"
+								? ["ServerScriptService", "server", "add-item-stack"]
+								: undefined;
+						},
+					};
+				},
+			},
+		};
+
+		const resolver = createPackageResolver(program, {
+			loadDependencies: () => deps,
+			resolveModule: () => sourceFile,
+		});
+		const result = resolver?.resolveToRbxPath(
+			"./add-item-stack",
+			"/project/src/server/some.spec.ts",
+		);
+
+		expect(constructorCalls).toContainEqual({
+			outDirectory: libraryOutDirectory,
+			rootDirectory: libraryRootDirectory,
+		});
+		expect(result).toStrictEqual(["ServerScriptService", "server", "add-item-stack"]);
+	});
+
+	it("should fall back to current translator when no reference owns the file", () => {
+		expect.assertions(1);
+
+		const program = mockProgram(
+			{
+				configFilePath: "/project/tsconfig.spec.json",
+				outDir: "/project/out-test",
+				rootDir: "/project",
+			},
+			[
+				{
+					commandLine: {
+						fileNames: ["/project/src/other.ts"],
+						options: { outDir: "/project/out", rootDir: "/project/src" },
+					},
+				},
+			],
+		);
+
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator(rootDirectory: string, outDirectory: string) {
+				return {
+					getOutputPath: (filePath: string) => {
+						return path
+							.join(outDirectory, path.relative(rootDirectory, filePath))
+							.replace(/\\/g, "/");
+					},
+				};
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: () => {
+					return {
+						getRbxPathFromFilePath: (filePath: string) => {
+							return filePath === "/project/out-test/test/helper.ts"
+								? ["ReplicatedStorage", "integration-tests", "helper"]
+								: undefined;
+						},
+					};
+				},
+			},
+		};
+
+		const resolver = createPackageResolver(program, {
+			loadDependencies: () => deps,
+			resolveModule: () => "/project/test/helper.ts",
+		});
+		const result = resolver?.resolveToRbxPath(
+			"#test/helper",
+			"/project/src/server/some.spec.ts",
+		);
+
+		expect(result).toStrictEqual(["ReplicatedStorage", "integration-tests", "helper"]);
 	});
 
 	it("should bypass outDir translation for node_modules paths", () => {
