@@ -1,8 +1,12 @@
 import path from "node:path";
 import ts from "typescript";
 
+import type { TsConfigReader } from "./tsconfig-reader.js";
+import { defaultReadTsConfig, resolveRojoFromTsConfig } from "./tsconfig-reader.js";
+
 export interface CreateResolverOptions {
 	loadDependencies?: () => Dependencies | undefined;
+	readTsConfig?: TsConfigReader;
 	resolveModule?: ModuleResolver;
 }
 
@@ -21,6 +25,11 @@ type ModuleResolver = (
 	options: ts.CompilerOptions,
 ) => string | undefined;
 
+interface OwnerTranslator {
+	readonly fileNames: ReadonlySet<string>;
+	readonly pathTranslator: PathTranslatorLike;
+}
+
 type PathTranslatorConstructor = new (
 	rootDirectory: string,
 	outDirectory: string,
@@ -34,6 +43,7 @@ interface PathTranslatorLike {
 
 interface ProjectContext {
 	readonly compilerOptions: ts.CompilerOptions;
+	readonly ownerTranslators: ReadonlyArray<OwnerTranslator>;
 	readonly pathTranslator: PathTranslatorLike;
 	readonly resolveModule: ModuleResolver;
 	readonly rojoResolver: RojoResolverLike;
@@ -57,7 +67,8 @@ export function createPackageResolver(
 		return undefined;
 	}
 
-	const { compilerOptions, pathTranslator, resolveModule, rojoResolver } = context;
+	const { compilerOptions, ownerTranslators, pathTranslator, resolveModule, rojoResolver } =
+		context;
 
 	return {
 		resolveToRbxPath(specifier: string, containingFile: string) {
@@ -66,8 +77,16 @@ export function createPackageResolver(
 				return;
 			}
 
-			const outputPath = pathTranslator.getOutputPath(resolvedFileName);
-			const rbxPath = rojoResolver.getRbxPathFromFilePath(outputPath);
+			if (isUnderNodeModules(resolvedFileName)) {
+				const rbxPath = rojoResolver.getRbxPathFromFilePath(resolvedFileName);
+				return stripIndexSegment(rbxPath);
+			}
+
+			const translator =
+				pickOwnerTranslator(ownerTranslators, resolvedFileName) ?? pathTranslator;
+			const rbxPath = rojoResolver.getRbxPathFromFilePath(
+				translator.getOutputPath(resolvedFileName),
+			);
 			return stripIndexSegment(rbxPath);
 		},
 	};
@@ -172,35 +191,124 @@ function defaultResolveModule(
 		?.resolvedFileName;
 }
 
+const NODE_MODULES_RE = /[\\/]node_modules[\\/]/;
+
+interface BuildContextInput {
+	readonly deps: Dependencies;
+	readonly outDirectory: string;
+	readonly resolveModule: ModuleResolver;
+	readonly rojoConfigPath: string;
+	readonly rootDirectory: string;
+}
+
+function buildContext(program: ts.Program, input: BuildContextInput): ProjectContext {
+	const { deps, outDirectory, resolveModule, rojoConfigPath, rootDirectory } = input;
+	return {
+		compilerOptions: program.getCompilerOptions(),
+		ownerTranslators: collectOwnerTranslators(program, deps.PathTranslator),
+		pathTranslator: new deps.PathTranslator(rootDirectory, outDirectory, undefined, false),
+		resolveModule,
+		rojoResolver: deps.RojoResolver.fromPath(rojoConfigPath),
+	};
+}
+
+function buildOwnerTranslator(
+	commandLine: ts.ParsedCommandLine,
+	PathTranslatorCtor: PathTranslatorConstructor,
+): OwnerTranslator | undefined {
+	const { fileNames, options } = commandLine;
+	const { configFilePath, outDir, rootDir } = options;
+	if (typeof outDir !== "string") {
+		return undefined;
+	}
+
+	const referenceRoot =
+		rootDir ?? (typeof configFilePath === "string" ? path.dirname(configFilePath) : undefined);
+	if (referenceRoot === undefined) {
+		return undefined;
+	}
+
+	const pathTranslator = new PathTranslatorCtor(referenceRoot, outDir, undefined, false);
+	return { fileNames: new Set(fileNames), pathTranslator };
+}
+
+function collectOwnerTranslators(
+	program: ts.Program,
+	PathTranslatorCtor: PathTranslatorConstructor,
+): Array<OwnerTranslator> {
+	const references = program.getResolvedProjectReferences() ?? [];
+	const translators: Array<OwnerTranslator> = [];
+	for (const reference of references) {
+		if (reference === undefined) {
+			continue;
+		}
+
+		const owner = buildOwnerTranslator(reference.commandLine, PathTranslatorCtor);
+		if (owner !== undefined) {
+			translators.push(owner);
+		}
+	}
+
+	return translators;
+}
+
+function isUnderNodeModules(filePath: string): boolean {
+	return NODE_MODULES_RE.test(filePath);
+}
+
+function pickOwnerTranslator(
+	translators: ReadonlyArray<OwnerTranslator>,
+	filePath: string,
+): PathTranslatorLike | undefined {
+	for (const owner of translators) {
+		if (owner.fileNames.has(filePath)) {
+			return owner.pathTranslator;
+		}
+	}
+
+	return undefined;
+}
+
 function resolveProjectContext(
 	program: ts.Program,
 	options: CreateResolverOptions,
 ): ProjectContext | undefined {
-	const { loadDependencies = tryLoadDependencies, resolveModule = defaultResolveModule } =
-		options;
-	const compilerOptions = program.getCompilerOptions();
-	const { configFilePath, outDir, rootDir } = compilerOptions;
-	if (typeof configFilePath !== "string" || outDir === undefined) {
+	const { configFilePath, outDir, rootDir } = program.getCompilerOptions();
+	const deps = (options.loadDependencies ?? tryLoadDependencies)();
+	if (typeof configFilePath !== "string" || outDir === undefined || deps === undefined) {
 		return undefined;
 	}
 
 	const projectDirectory = path.dirname(configFilePath);
-	const rootDirectory = rootDir ?? projectDirectory;
-
-	const deps = loadDependencies();
-	if (deps === undefined) {
-		return undefined;
-	}
-
-	const rojoConfigPath = findRojoConfig(deps.RojoResolver, projectDirectory);
+	const rojoConfigPath = resolveRojoConfigPath(
+		configFilePath,
+		projectDirectory,
+		options.readTsConfig ?? defaultReadTsConfig,
+		deps.RojoResolver,
+	);
 	if (rojoConfigPath === undefined) {
 		return undefined;
 	}
 
-	const rojoResolver = deps.RojoResolver.fromPath(rojoConfigPath);
-	const pathTranslator = new deps.PathTranslator(rootDirectory, outDir, undefined, false);
+	return buildContext(program, {
+		deps,
+		outDirectory: outDir,
+		resolveModule: options.resolveModule ?? defaultResolveModule,
+		rojoConfigPath,
+		rootDirectory: rootDir ?? projectDirectory,
+	});
+}
 
-	return { compilerOptions, pathTranslator, resolveModule, rojoResolver };
+function resolveRojoConfigPath(
+	configFilePath: string,
+	projectDirectory: string,
+	readTsConfig: TsConfigReader,
+	rojoResolverStatic: RojoResolverStatic,
+): string | undefined {
+	return (
+		resolveRojoFromTsConfig(configFilePath, readTsConfig) ??
+		findRojoConfig(rojoResolverStatic, projectDirectory)
+	);
 }
 
 function stripIndexSegment(
