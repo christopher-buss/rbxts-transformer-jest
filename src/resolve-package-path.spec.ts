@@ -306,6 +306,100 @@ describe(createPackageResolver, () => {
 		]);
 	});
 
+	it("should bypass outDir translation for node_modules paths", () => {
+		expect.assertions(2);
+
+		const program = mockProgram({
+			configFilePath: "/project/tsconfig.spec.json",
+			outDir: "/project/out-test",
+		});
+		let translatorCalled = false;
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator() {
+				return {
+					getOutputPath: () => {
+						translatorCalled = true;
+						return "/project/out-test/node_modules/@rbxts/services/index.d.ts";
+					},
+				};
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: () => {
+					return {
+						getRbxPathFromFilePath: (filePath: string) => {
+							return filePath === "/project/node_modules/@rbxts/services/index.d.ts"
+								? [
+										"ReplicatedStorage",
+										"rbxts_include",
+										"node_modules",
+										"@rbxts",
+										"services",
+									]
+								: undefined;
+						},
+					};
+				},
+			},
+		};
+
+		const resolver = createPackageResolver(program, {
+			loadDependencies: () => deps,
+			resolveModule: () => "/project/node_modules/@rbxts/services/index.d.ts",
+		});
+		const result = resolver?.resolveToRbxPath("@rbxts/services", "/project/src/test.ts");
+
+		expect(translatorCalled).toBe(false);
+		expect(result).toStrictEqual([
+			"ReplicatedStorage",
+			"rbxts_include",
+			"node_modules",
+			"@rbxts",
+			"services",
+		]);
+	});
+
+	it("should apply outDir translation for project-local paths", () => {
+		expect.assertions(2);
+
+		const program = mockProgram({
+			configFilePath: "/project/tsconfig.json",
+			outDir: "/project/out",
+		});
+		let translatedFrom: string | undefined;
+		const deps: Dependencies = {
+			PathTranslator: function PathTranslator() {
+				return {
+					getOutputPath: (filePath: string) => {
+						translatedFrom = filePath;
+						return "/project/out/shared/foo.luau";
+					},
+				};
+			} as unknown as Dependencies["PathTranslator"],
+			RojoResolver: {
+				findRojoConfigFilePath: () => ({ path: "/project/default.project.json" }),
+				fromPath: () => {
+					return {
+						getRbxPathFromFilePath: (filePath: string) => {
+							return filePath === "/project/out/shared/foo.luau"
+								? ["ReplicatedStorage", "shared", "foo"]
+								: undefined;
+						},
+					};
+				},
+			},
+		};
+
+		const resolver = createPackageResolver(program, {
+			loadDependencies: () => deps,
+			resolveModule: () => "/project/src/shared/foo.ts",
+		});
+		const result = resolver?.resolveToRbxPath("@shared/foo", "/project/src/test.ts");
+
+		expect(translatedFrom).toBe("/project/src/shared/foo.ts");
+		expect(result).toStrictEqual(["ReplicatedStorage", "shared", "foo"]);
+	});
+
 	it("should strip bare index segment from rojo-resolved rbx path", () => {
 		expect.assertions(1);
 

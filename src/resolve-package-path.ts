@@ -66,8 +66,10 @@ export function createPackageResolver(
 				return;
 			}
 
-			const outputPath = pathTranslator.getOutputPath(resolvedFileName);
-			const rbxPath = rojoResolver.getRbxPathFromFilePath(outputPath);
+			const lookupPath = isUnderNodeModules(resolvedFileName)
+				? resolvedFileName
+				: pathTranslator.getOutputPath(resolvedFileName);
+			const rbxPath = rojoResolver.getRbxPathFromFilePath(lookupPath);
 			return stripIndexSegment(rbxPath);
 		},
 	};
@@ -170,6 +172,12 @@ function defaultResolveModule(
 ): string | undefined {
 	return ts.resolveModuleName(specifier, containingFile, options, ts.sys).resolvedModule
 		?.resolvedFileName;
+}
+
+const NODE_MODULES_RE = /[\\/]node_modules[\\/]/;
+
+function isUnderNodeModules(filePath: string): boolean {
+	return NODE_MODULES_RE.test(filePath);
 }
 
 function resolveProjectContext(
