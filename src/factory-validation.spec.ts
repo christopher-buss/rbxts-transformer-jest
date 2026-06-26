@@ -424,4 +424,48 @@ jest.mock<SomeType>("./foo", () => ({}));
 
 		expect(transformCode(input)).toMatchSnapshot();
 	});
+
+	it("should skip method shorthand names in factory object literals", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ GetPlayerByUserId(self, userId) { return userId; } }));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should skip get accessor names in factory object literals", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ get Value() { return undefined; } }));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should skip set accessor names in factory object literals", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ set Value(next) {} }));
+`;
+
+		expect(transformCode(input)).toMatchSnapshot();
+	});
+
+	it("should still throw on outer reference inside method shorthand body", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.mock("./foo", () => ({ GetPlayerByUserId() { return someVar; } }));
+`;
+
+		expect(() => transformCode(input)).toThrowErrorMatchingSnapshot();
+	});
 });
