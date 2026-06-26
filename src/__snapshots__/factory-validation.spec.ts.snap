@@ -164,9 +164,27 @@ jest.mock<SomeType>(script.Parent.foo, () => ({}));
 "
 `;
 
+exports[`factory-validation > should skip get accessor names in factory object literals 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => ({ get Value() { return undefined; } }));
+"
+`;
+
+exports[`factory-validation > should skip method shorthand names in factory object literals 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => ({ GetPlayerByUserId(self, userId) { return userId; } }));
+"
+`;
+
 exports[`factory-validation > should skip property names in object literals 1`] = `
 "import { jest } from "@rbxts/jest-globals";
 jest.mock(script.Parent.foo, () => ({ someVar: 42 }));
+"
+`;
+
+exports[`factory-validation > should skip set accessor names in factory object literals 1`] = `
+"import { jest } from "@rbxts/jest-globals";
+jest.mock(script.Parent.foo, () => ({ set Value(next) { } }));
 "
 `;
 

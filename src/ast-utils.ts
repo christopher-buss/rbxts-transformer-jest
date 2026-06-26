@@ -86,6 +86,10 @@ export function isReferencePosition(node: ts.Identifier): boolean {
 		((ts.isVariableDeclaration(parent) || ts.isParameter(parent)) && parent.name === node) ||
 		((ts.isPropertyAccessExpression(parent) || ts.isPropertyAssignment(parent)) &&
 			parent.name === node) ||
+		((ts.isMethodDeclaration(parent) ||
+			ts.isGetAccessorDeclaration(parent) ||
+			ts.isSetAccessorDeclaration(parent)) &&
+			parent.name === node) ||
 		(ts.isFunctionDeclaration(parent) && parent.name === node);
 
 	return !isDeclarationName;
