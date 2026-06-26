@@ -88,10 +88,14 @@ This compiles to the equivalent of:
 jest.mock(game:GetService("ReplicatedStorage"):FindFirstChild("rbxts_include"):FindFirstChild("node_modules"):FindFirstChild("@rbxts"):FindFirstChild("services"), function() ... end)
 ```
 
-> **Note:** You must patch `@rbxts/jest` types to accept a `string` as the first
-> argument to `jest.mock()` and `jest.unmock()`. The upstream types only accept
-> `ModuleScript` and do not account for string specifiers being transformed at
-> compile time.
+> **Note:** This string-specifier support applies to every method whose first
+> argument the transformer resolves: `jest.mock()`, `jest.unmock()`,
+> `jest.doMock()`, `jest.dontMock()`, and `jest.requireActual()`. If your
+> `@rbxts/jest` types only accept `ModuleScript` for any of these (they don't
+> account for string specifiers being rewritten at compile time), you must
+> augment `@rbxts/jest-globals` with a `string` overload for that method — e.g.
+> `declare module "@rbxts/jest-globals" { namespace jest { function doMock<T = unknown>(moduleScript: string, factory?: () => T): typeof jest; } }`
+> — or `pnpm typecheck` will reject the string argument.
 
 ## Per-test Mocking (`doMock` / `dontMock`)
 
@@ -124,7 +128,8 @@ describe("server", () => {
 The transformer resolves the module-string first argument of `doMock`,
 `dontMock`, and `requireActual` to a Roblox instance path, exactly as it does
 for hoisted `mock` / `unmock`. Chained `doMock` / `dontMock` calls are
-supported.
+supported. (As with `mock` / `unmock`, the `string` overload must exist in your
+`@rbxts/jest` types — see the note above.)
 
 ## License
 

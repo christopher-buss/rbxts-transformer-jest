@@ -123,6 +123,20 @@ other.doMock("./foo", () => ({}));
 		expect(result).toMatch(/other\.doMock\("\.\/foo"/);
 	});
 
+	it("should not transform doMock on a top-level shadowed jest binding", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+const jest = fake;
+jest.doMock("./foo", () => ({}));
+`;
+
+		const result = transformCode(input);
+
+		expect(result).toMatch(/jest\.doMock\("\.\/foo"/);
+	});
+
 	it("should not hoist jest.doMock above import statements", () => {
 		expect.assertions(1);
 

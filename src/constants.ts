@@ -3,9 +3,13 @@ export const HOIST_METHODS = new Set(["mock", "unmock"]);
 // be resolved to an Instance path, but which must NOT be hoisted or validated
 // (so their factories may reference imported helpers). `doMock`/`dontMock`
 // return `jest` and can be chained; `requireActual` returns the module.
-export const MODULE_PATH_METHODS = new Set(["doMock", "dontMock", "requireActual"]);
+export const MODULE_PATH_METHODS: ReadonlySet<string> = new Set([
+	"doMock",
+	"dontMock",
+	"requireActual",
+]);
 // Subset of MODULE_PATH_METHODS that returns `jest` and is therefore chainable.
-export const CHAINABLE_MODULE_PATH_METHODS = new Set(["doMock", "dontMock"]);
+export const CHAINABLE_MODULE_PATH_METHODS: ReadonlySet<string> = new Set(["doMock", "dontMock"]);
 export const JEST_MODULE = "@rbxts/jest-globals";
 export const JEST_GLOBAL_NAME = "jest";
 export const ALLOWED_IDENTIFIERS = new Set(["expect", "Infinity", "jest", "NaN", "undefined"]);
