@@ -194,6 +194,13 @@ jest.mock(script.Parent.foo, () => (_self: unknown, action: string, entity: Enti
 "
 `;
 
+exports[`factory-validation > should still throw on outer reference inside method shorthand body 1`] = `
+[Error: [rbxts-jest-transformer] test.ts:3 — The module factory of \`jest.mock(./foo)\` is not allowed to reference any out-of-scope variables.
+Invalid variable access: someVar
+Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with \`mock\` (case insensitive) are permitted.
+Global identifiers and variables initialized with pure constant expressions (literals, arrays, objects, arrow functions) are also permitted.]
+`;
+
 exports[`factory-validation > should throw on out-of-scope JSX component in factory 1`] = `
 [Error: [rbxts-jest-transformer] test.tsx:3 — The module factory of \`jest.mock(./foo)\` is not allowed to reference any out-of-scope variables.
 Invalid variable access: SomeComponent

@@ -466,6 +466,6 @@ import { jest } from "@rbxts/jest-globals";
 jest.mock("./foo", () => ({ GetPlayerByUserId() { return someVar; } }));
 `;
 
-		expect(() => transformCode(input)).toThrowError("someVar");
+		expect(() => transformCode(input)).toThrowErrorMatchingSnapshot();
 	});
 });
