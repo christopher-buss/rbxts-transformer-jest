@@ -93,6 +93,39 @@ jest.mock(game:GetService("ReplicatedStorage"):FindFirstChild("rbxts_include"):F
 > `ModuleScript` and do not account for string specifiers being transformed at
 > compile time.
 
+## Per-test Mocking (`doMock` / `dontMock`)
+
+`jest.mock()` / `jest.unmock()` are hoisted to file scope, so they apply to the
+whole test file. For **per-test** or **per-describe** mocking, use the
+imperative `jest.doMock()` / `jest.dontMock()`. These are **not** hoisted (they
+run where you write them) and their factories are **not** validated, so the
+factory may reference imported helpers:
+
+```ts
+import { beforeEach, describe, expect, it, jest } from "@rbxts/jest-globals";
+
+import { createServicesMock } from "./test/mock-services";
+
+describe("server", () => {
+	beforeEach(() => {
+		jest.resetModules();
+		jest.doMock("@rbxts/services", () => {
+			return createServicesMock({ RunService: { IsServer: () => true } });
+		});
+	});
+
+	it("sees IsServer() === true via dynamic import", async () => {
+		const { RunService } = await import("@rbxts/services");
+		expect(RunService.IsServer()).toBe(true);
+	});
+});
+```
+
+The transformer resolves the module-string first argument of `doMock`,
+`dontMock`, and `requireActual` to a Roblox instance path, exactly as it does
+for hoisted `mock` / `unmock`. Chained `doMock` / `dontMock` calls are
+supported.
+
 ## License
 
 [MIT](https://github.com/christopher-buss/rbxts-jest-transformer/blob/main/LICENSE)

@@ -2,7 +2,11 @@ import ts from "typescript";
 
 import { collectJestNames } from "./collect-jest-names.js";
 import type { IdentifierPredicate, JestNames } from "./constants.js";
-import { ALLOWED_IDENTIFIERS, REQUIRE_ACTUAL_METHOD } from "./constants.js";
+import {
+	ALLOWED_IDENTIFIERS,
+	CHAINABLE_MODULE_PATH_METHODS,
+	MODULE_PATH_METHODS,
+} from "./constants.js";
 import { isJestCallee, partitionBlock, partitionStatements } from "./partition.js";
 import type { PackageResolver } from "./resolve-package-path.js";
 import { createPackageResolver } from "./resolve-package-path.js";
@@ -37,7 +41,7 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
 				ts.isSourceFile,
 			);
 
-			return ts.visitNode(hoisted, createRequireActualVisitor(context, ctx), ts.isSourceFile);
+			return ts.visitNode(hoisted, createModulePathVisitor(context, ctx), ts.isSourceFile);
 		};
 	};
 }
@@ -99,15 +103,15 @@ function createHoistVisitor(
 	return visitor;
 }
 
-function createRequireActualVisitor(
+function createModulePathVisitor(
 	context: ts.TransformationContext,
 	ctx: TransformContext,
 ): (node: ts.Node) => ts.Node {
 	function visitor(node: ts.Node): ts.Node {
 		const visited = ts.visitEachChild(node, visitor, context);
 
-		if (ts.isCallExpression(visited) && isRequireActualCall(visited, ctx.names)) {
-			return visitRequireActual(visited, ctx);
+		if (ts.isCallExpression(visited) && isModulePathCall(visited, ctx.names)) {
+			return visitModulePathCall(visited, ctx);
 		}
 
 		return visited;
@@ -122,11 +126,25 @@ function getJsxFactoryIdentifier(options: ts.CompilerOptions): string | undefine
 	return dot === -1 ? factory : factory.slice(0, dot);
 }
 
-function isRequireActualCall(node: ts.CallExpression, names: JestNames): boolean {
+function isModulePathCall(node: ts.CallExpression, names: JestNames): boolean {
 	return (
 		ts.isPropertyAccessExpression(node.expression) &&
-		node.expression.name.text === REQUIRE_ACTUAL_METHOD &&
-		isJestCallee(node.expression.expression, names)
+		MODULE_PATH_METHODS.has(node.expression.name.text) &&
+		isModulePathCallee(node.expression.expression, names)
+	);
+}
+
+function isModulePathCallee(node: ts.Expression, names: JestNames): boolean {
+	if (isJestCallee(node, names)) {
+		return true;
+	}
+
+	// Chained imperative calls: jest.doMock("./a", fa).doMock("./b", fb)
+	return (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		CHAINABLE_MODULE_PATH_METHODS.has(node.expression.name.text) &&
+		isModulePathCallee(node.expression.expression, names)
 	);
 }
 
@@ -148,7 +166,7 @@ function visitBlock(node: ts.Block, ctx: TransformContext): ts.Block {
 	]);
 }
 
-function visitRequireActual(node: ts.CallExpression, ctx: TransformContext): ts.CallExpression {
+function visitModulePathCall(node: ts.CallExpression, ctx: TransformContext): ts.CallExpression {
 	const args = transformFirstArgument(
 		ctx.factory,
 		node,

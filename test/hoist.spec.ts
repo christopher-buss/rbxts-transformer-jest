@@ -204,4 +204,42 @@ describe("integration: hoist-jest through roblox-ts pipeline", () => {
 
 		expect(luau).toMatchSnapshot();
 	});
+
+	it("should keep jest.doMock imperative with a factory referencing imports", () => {
+		expect.assertions(3);
+
+		const jestStringPatch = `
+			import "@rbxts/jest-globals";
+			declare module "@rbxts/jest-globals" {
+				namespace jest {
+					function doMock<T = unknown>(moduleScript: string, factory?: () => T): typeof jest;
+				}
+			}
+		`;
+
+		// Factory references the imported \`foo\` binding — this only compiles
+		// because doMock is neither hoisted nor validated against scope (the
+		// equivalent jest.mock factory throws, see the out-of-scope test above).
+		const source = `
+			import { jest } from "@rbxts/jest-globals";
+			import { foo } from "./foo";
+			jest.doMock("@rbxts/jest", () => ({ default: foo }));
+			print(foo);
+		`;
+
+		const luau = compile(source, {
+			"/src/jest-string-patch.d.ts": jestStringPatch,
+		});
+		const lines = luau.split("\n");
+		const fooImportIndex = lines.findIndex(
+			(line) => line.includes("foo") && line.includes("TS.import"),
+		);
+		const doMockIndex = lines.findIndex((line) => line.includes("doMock"));
+
+		expect(doMockIndex).toBeGreaterThan(-1);
+		// Imperative: doMock stays after the import (NOT hoisted above it).
+		expect(doMockIndex).toBeGreaterThan(fooImportIndex);
+		// The factory captured the imported binding (proves it was not checked).
+		expect(luau).toMatch(/default = foo/);
+	});
 });

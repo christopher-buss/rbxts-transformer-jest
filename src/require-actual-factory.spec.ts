@@ -52,4 +52,17 @@ jest.mock("@rbxts/jest", () => {
 		expect(result).toMatch(/jest\.mock\(game\.GetService\("ReplicatedStorage"\)/);
 		expect(result).toMatch(/jest\.requireActual\(game\.GetService\("ReplicatedStorage"\)/);
 	});
+
+	it("should resolve package specifier in jest.doMock with resolver", () => {
+		expect.assertions(1);
+
+		const input = `
+import { jest } from "@rbxts/jest-globals";
+jest.doMock("@rbxts/jest", () => ({}));
+`;
+
+		const result = transformWithResolver(input);
+
+		expect(result).toMatch(/jest\.doMock\(game\.GetService\("ReplicatedStorage"\)/);
+	});
 });
