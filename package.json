@@ -44,6 +44,7 @@
 	"devDependencies": {
 		"@antfu/ni": "catalog:dev",
 		"@isentinel/eslint-config": "catalog:lint",
+		"@isentinel/hooks": "catalog:dev",
 		"@isentinel/tsconfig": "catalog:tsc",
 		"@rbxts/compiler-types": "catalog:integration",
 		"@rbxts/jest": "catalog:test",
