@@ -98,6 +98,12 @@ through the full roblox-ts VirtualProject pipeline (TS → Lua).
     wouldn't be mocked and would remain above hoisted calls
 12. **[REQ-012]**: Configurable jest module specifier — allow overriding the
     `@rbxts/jest-globals` module name via plugin config for non-standard setups
+13. **[REQ-013]** ✅: Imperative module-specifier resolution — resolve the
+    first-argument module string of `doMock`, `dontMock`, and `requireActual` to
+    an Instance path (same resolution as hoisted `mock`/`unmock`), without
+    hoisting or factory-validating them. Enables per-test/per-describe module
+    mocking via `jest.doMock(...)` (factories may reference imported helpers
+    since they are never validated). Chained `doMock`/`dontMock` supported.
 
 ---
 
@@ -219,8 +225,8 @@ Global identifiers and variables initialized with pure constant expressions
 - ~~Integration test tier (Tier 2 with patched roblox-ts VirtualProject)~~ —
   implemented via `test/compile.ts` + `test/hoist.spec.ts`
 - ~~`jest.requireActual` / `jest.requireMock` support~~ — `jest.requireActual`
-  string path transformation implemented; `jest.requireMock` remains out of
-  scope
+  string path transformation implemented (see REQ-013, alongside `doMock` /
+  `dontMock`); `jest.requireMock` remains out of scope
 - JSX/TSX-specific handling
 
 ---

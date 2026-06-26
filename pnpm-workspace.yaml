@@ -23,6 +23,7 @@ catalogs:
     pncat: ^0.9.1
   dev:
     "@antfu/ni": ^28.2.0
+    "@isentinel/hooks": ^1.5.2
     file-entry-cache: ^11.1.2
     madge: ^8.0.0
   integration:
@@ -36,7 +37,7 @@ catalogs:
     eslint-plugin-erasable-syntax-only: ^0.4.0
     eslint-plugin-n: ^17.23.2
     eslint-plugin-pnpm: ^1.5.0
-    eslint_d: ^14.3.0
+    eslint_d: ^15.0.2
     lint-staged: ^16.2.7
     publint: ^0.3.17
     simple-git-hooks: ^2.13.1

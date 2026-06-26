@@ -22,26 +22,25 @@
 		"defaultMode": "plan",
 		"additionalDirectories": []
 	},
-	"hooks": {
-		"PostToolUse": [
-			{
-				"matcher": "Edit|Write|MultiEdit",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "node scripts/type-check.ts"
-					},
-					{
-						"type": "command",
-						"command": "node scripts/lint.ts"
-					}
-				]
-			}
-		]
-	},
 	"enabledPlugins": {
 		"claude-md-management@claude-plugins-official": true,
 		"code-simplifier@claude-plugins-official": true,
+		"sentinel@isentinel": true,
 		"typescript-lsp@claude-plugins-official": true
+	},
+	"extraKnownMarketplaces": {
+		"isentinel": {
+			"source": {
+				"source": "github",
+				"repo": "christopher-buss/skills"
+			},
+			"autoUpdate": true
+		},
+		"worktrunk": {
+			"source": {
+				"source": "github",
+				"repo": "max-sixty/worktrunk"
+			}
+		}
 	}
 }
